@@ -1,6 +1,6 @@
 # ☕ Cafetería App - Arquitectura Hexagonal
 
-Proyecto de gestión de cafetería universitaria utilizando una estructura de **Arquitectura Hexagonal (Ports & Adapters)** para separar las reglas de negocio de la tecnología.
+Proyecto de gestión de cafetería utilizando una estructura de **Arquitectura Hexagonal (Ports & Adapters)** para separar las reglas de negocio de la tecnología.
 
 ## 🛠️ Tecnologías
 - **Backend:** Django + Django REST Framework.
@@ -14,7 +14,7 @@ Proyecto de gestión de cafetería universitaria utilizando una estructura de **
 
 ### 1. Clonar el proyecto
 ```bash
-git clone [https://github.com/tu-usuario/cafeteria.git](https://github.com/tu-usuario/cafeteria.git)
+git clone [https://github.com/tu-usuario/cafeteria.git](https://github.com/KNIKO20/cafeteria.git)
 cd cafeteria
 ```
 
