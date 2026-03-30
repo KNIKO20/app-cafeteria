@@ -19,6 +19,12 @@ _order_repo = MongoOrderRepository()
 _product_repo = MongoProductRepository()
 _payment_gateway = StripePaymentGateway()
 
+def get_order_repo() -> MongoOrderRepository:
+    return _order_repo
+
+def get_product_repo() -> MongoProductRepository:
+    return _product_repo
+
 # Casos de uso (factories)
 def get_create_order_use_case() -> CreateOrderUseCase:
     return CreateOrderUseCase(_order_repo, _product_repo)
