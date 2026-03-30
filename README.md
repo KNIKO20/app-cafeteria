@@ -1,4 +1,4 @@
-# ☕ Cafetería App - Arquitectura Hexagonal
+# ☕ Cafetería App 
 
 Proyecto de gestión de cafetería utilizando una estructura de **Arquitectura Hexagonal (Ports & Adapters)** para separar las reglas de negocio de la tecnología.
 
@@ -14,7 +14,7 @@ Proyecto de gestión de cafetería utilizando una estructura de **Arquitectura H
 
 ### 1. Clonar el proyecto
 ```bash
-git clone [https://github.com/tu-usuario/cafeteria.git](https://github.com/KNIKO20/cafeteria.git)
+git clone [https://github.com/KNIKO20/cafeteria.git](https://github.com/KNIKO20/cafeteria.git)
 cd cafeteria
 ```
 
@@ -36,7 +36,7 @@ cd cafeteria
 
 ---
 
-## 📐 Estructura del Proyecto (Hexagonal)
+## 📐 Estructura del Proyecto 
 
 Nuestra lógica reside en `backend/core`. Los adaptadores se encargan de la comunicación externa:
 
