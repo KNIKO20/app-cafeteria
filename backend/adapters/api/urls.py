@@ -2,11 +2,9 @@ from django.urls import path
 from adapters.api.views.order_views import CreateOrderView, ProcessPaymentView, UserOrdersView
 from adapters.api.views.product_views import ProductListView
 from adapters.api.views.admin_views import PendingOrdersView, UpdateOrderStatusView, VerifyPickupCodeView
-from adapters.api.views.auth_views import GoogleLoginView
+
 
 urlpatterns = [
-    # Auth
-    path('auth/google/', GoogleLoginView.as_view(), name='google-login'),
     
     # Cliente (alumno)
     path('products/', ProductListView.as_view(), name='product-list'),
