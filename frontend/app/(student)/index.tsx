@@ -45,6 +45,8 @@ export default function MenuScreen() {
     setLoading(true);
     try {
       const data = await getMenu(selectedCategory || undefined);
+      console.log(data);
+      
       setProducts(data);
     } catch (error) {
       console.error('Error cargando menú:', error);

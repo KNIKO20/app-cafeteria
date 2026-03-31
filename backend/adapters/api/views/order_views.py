@@ -78,4 +78,4 @@ class UserOrdersView(APIView):
             "created_at": o.created_at.isoformat(),
             "items": [{"name": i.product_name, "qty": i.quantity, "price": i.unit_price}
                       for i in o.items]
-        } for o in orders])
+        } for o in orders], status=200)
