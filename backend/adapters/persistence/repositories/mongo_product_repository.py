@@ -10,8 +10,11 @@ from adapters.persistence.models.product_model import ProductDocument
 class MongoProductRepository(ProductRepository):
     
     def find_all_available(self) -> List[Product]:
-        docs = ProductDocument.objects(is_available=True)      
+        docs = ProductDocument.objects(is_deleted=False,is_available=True)      
         return [self._to_entity(doc) for doc in docs]
+
+    def find_all(self) -> List[Product]:
+        return [self._to_entity(doc) for doc in ProductDocument.objects(is_deleted=False)]
 
     def find_by_id(self, product_id) -> Optional[Product]:
         doc = ProductDocument.objects(product_id=product_id).first()
@@ -37,14 +40,31 @@ class MongoProductRepository(ProductRepository):
         
         doc.save()
         return product
-
-    def update_stock(self, product_id, quantity_change):
-        doc = ProductDocument.objects(product_id = product_id).first()
+    def delete(self, product_id: str):
+        doc = ProductDocument.objects(product_id=product_id).first()
         if doc:
-            doc.stock  += quantity_change 
-            doc.update()
-            return 1
-        return 0
+            doc.is_deleted = True
+            doc.is_available = False # Por seguridad, también lo marcamos no disponible
+            doc.save()
+            return True
+        return False
+    def update_stock(self, product_id, quantity_change):
+        doc = ProductDocument.objects(product_id=product_id).first()
+        if doc:
+            if quantity_change is None:
+                doc.is_available =  True
+                doc.save() 
+                return True
+            new_stock = doc.stock + quantity_change
+            if new_stock < 0:
+                return False 
+            doc.stock = new_stock
+            
+            if doc.stock == 0  :
+                doc.is_available = False
+            doc.save() 
+            return True
+        return False
 
     def _to_entity(self, d: ProductDocument) -> Product:
         return Product(
@@ -55,6 +75,8 @@ class MongoProductRepository(ProductRepository):
                 image_url=d.image_url,
                 category=ProductCategory(d.category),
                 preparation_minutes=d.preparation_minutes,
+                stock=getattr(d, 'stock', 0), 
+                is_available=getattr(d, 'is_available', True)
             )
 
         
