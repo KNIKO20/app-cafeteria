@@ -1,5 +1,9 @@
 from django.urls import path
 from adapters.api.views.order_views import CreateOrderView, ProcessPaymentView, UserOrdersView
+from adapters.api.views.auth_views import GoogleLoginView, MeView
+
+from django.urls import path
+from adapters.api.views.order_views import CreateOrderView, ProcessPaymentView, UserOrdersView
 from adapters.api.views.product_views import ProductListView
 from adapters.api.views.admin_views import (
     ProductManagementView, 
@@ -9,7 +13,6 @@ from adapters.api.views.admin_views import (
     UpdateOrderStatusView,
     VerifyPickupCodeView
     )
-
 
 urlpatterns = [
     
@@ -40,5 +43,4 @@ urlpatterns = [
     # Rutas de Autenticación
     path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
     path('auth/me/', MeView.as_view(), name='auth-me'),
-]
 ]
