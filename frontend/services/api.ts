@@ -37,7 +37,7 @@ export const processPayment = (orderId: string, paymentToken: string) =>
 
 // ── Admin ──────────────────────────────────────────────
 export const getPendingOrders = () =>
-  api.get('/admin/orders/').then(r => r.data);
+  api.get('/admin/orders/pending/').then(r => r.data);
 
 export const updateOrderStatus = (orderId: string, status: string) =>
   api.patch(`/admin/orders/${orderId}/status/`, { status }).then(r => r.data);

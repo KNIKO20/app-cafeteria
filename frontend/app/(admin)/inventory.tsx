@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -11,7 +11,6 @@ import {
   Modal
 } from 'react-native';
 import { getInventory, deleteProduct, createProduct, updateStockProduct, updateProduct } from '../../services/api'; // Ajusta la ruta a tu instancia de axios
-import ProductCard from '../../components/ProductCard';
 import ActionModal from '../../components/ActionModal';
 
 // --- Tipado para los productos ---
@@ -45,6 +44,7 @@ export default function InventoryScreen() {
     const [tempStock, setTempStock] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const CATEGORIES = ['bocadillo', 'bebida', 'postre', 'cafe']; 
 
 // Función para abrir el modal en modo edición
@@ -68,9 +68,15 @@ export default function InventoryScreen() {
     const openCreateModal = () => {
         setIsEditing(false);
         setSelectedProductId(null);
+
         setNewName('');
         setNewPrice('');
+        setNewCategory('bocadillo');
+        setNewDescription('');
+        setNewImageUrl('');
         setNewStock('');
+        setNewPrepTime('5');
+
         setModalVisible(true);
     };
     // Función para abrir el modal de Stock
@@ -219,14 +225,23 @@ export default function InventoryScreen() {
         </View>
         </View>
     );
-
+    const filteredProducts = useMemo(() => {
+        return products.filter((product) =>
+            product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [products, searchQuery]);
     return (
         <View style={styles.container}>
         <Text style={styles.title}>Panel de Inventario</Text>
-        
+        <TextInput
+            placeholder="Buscar producto por nombre..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+        />
         <TouchableOpacity 
         style={styles.verifyBtn} 
-        onPress={() => {closeModal();setModalVisible(true);}} 
+        onPress={openCreateModal} 
         >
         <Text style={styles.verifyBtnText}>+ Crear Nuevo Producto</Text>
         </TouchableOpacity>
@@ -237,73 +252,88 @@ export default function InventoryScreen() {
                 {isEditing ? `Editando: ${newName}` : 'Nuevo Producto'}
             </Text>
             
-            <TextInput 
-            placeholder="Nombre del producto" 
-            style={styles.modalInput} 
-            onChangeText={setNewName}
+            <TextInput
+                placeholder="Nombre del producto"
+                style={styles.modalInput}
+                value={newName}
+                onChangeText={setNewName}
             />
-
             <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TextInput 
-                placeholder="Precio (Ej: 3.50)" 
-                style={[styles.modalInput, { flex: 1 }]} 
-                keyboardType="numeric"
-                onChangeText={setNewPrice}
-            />
-            <TextInput 
-                placeholder="Minutos prep." 
-                style={[styles.modalInput, { flex: 1 }]} 
-                keyboardType="numeric"
-                onChangeText={setNewPrepTime}
-            />
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Precio</Text>
+                    <TextInput
+                        placeholder="Ej: 3.50"
+                        style={styles.modalInput}
+                        keyboardType="numeric"
+                        value={newPrice}
+                        onChangeText={setNewPrice}
+                    />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Prep. (minutos)</Text>
+                    <TextInput
+                        placeholder="Ej: 5"
+                        style={styles.modalInput}
+                        keyboardType="numeric"
+                        value={newPrepTime}
+                        onChangeText={setNewPrepTime}
+                    />
+                </View>
             </View>
 
             <Text style={{ marginBottom: 8, fontWeight: '700' }}>Categoría:</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 }}>
             {CATEGORIES.map((cat) => {
             // Definimos si está seleccionado fuera del JSX para que sea más claro
-            const isSelected = newCategory.toLowerCase() === cat.toLowerCase();
+            const normalizedCategory = (newCategory || '').trim().toLowerCase();
+            const normalizedCat = cat.trim().toLowerCase();
+            const isSelected = normalizedCategory === normalizedCat;
 
             return (
                 <TouchableOpacity
                 key={`cat-${cat}`} 
                 activeOpacity={0.7} 
                 style={[
-                    styles.badge,
-                    { backgroundColor: isSelected ? '#FF6B35' : '#eee' }
+                        styles.categoryChip,
+                        isSelected && styles.categoryChipSelected
                 ]}
                 onPress={() => setNewCategory(cat)}
                 >
-                <Text style={{ 
-                    color: isSelected ? '#fff' : '#666', 
-                    fontWeight: isSelected ? '800' : '400',
-                    textTransform: 'capitalize' 
-                }}>
+                <Text
+                    style={[
+                        styles.categoryChipText,
+                        isSelected && styles.categoryChipTextSelected
+                    ]}
+                >
                     {cat}
                 </Text>
                 </TouchableOpacity>
             );
             })}
             </View>
-
-            <TextInput 
-            placeholder="Stock inicial (Vacío = Ilimitado)" 
-            style={styles.modalInput} 
-            keyboardType="numeric"
-            onChangeText={setNewStock}
+            <Text style={styles.inputLabel}>Stock</Text>
+            <TextInput
+                placeholder="Stock inicial (Vacío = Ilimitado)"
+                style={styles.modalInput}
+                keyboardType="numeric"
+                value={newStock}
+                onChangeText={setNewStock}
             />
-
-            <TextInput 
-            placeholder="URL de la imagen" 
-            style={styles.modalInput} 
-            onChangeText={setNewImageUrl}
+            <Text style={styles.inputLabel}>URL de la imagen</Text>
+            <TextInput
+                placeholder="URL de la imagen"
+                style={styles.modalInput}
+                value={newImageUrl}
+                onChangeText={setNewImageUrl}
             />
-
-            <TextInput 
-            placeholder="Descripción" 
-            style={[styles.modalInput, { height: 80 }]} 
-            multiline
-            onChangeText={setNewDescription}
+            <Text style={styles.inputLabel}>Descripción</Text>
+            <TextInput
+                placeholder="Descripción"
+                style={[styles.modalInput, { height: 80 }]}
+                multiline
+                value={newDescription}
+                onChangeText={setNewDescription}
             />
 
             <TouchableOpacity style={styles.verifyBtn} onPress={handleSave}>
@@ -322,7 +352,7 @@ export default function InventoryScreen() {
             <ActivityIndicator size="large" color="#FF6B35" />
         ) : (
             <FlatList
-            data={products}
+            data={filteredProducts}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={{ paddingBottom: 40 }}
@@ -358,7 +388,7 @@ export default function InventoryScreen() {
 
     const styles = StyleSheet.create({
     codeInput: { flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 10, fontSize: 18, letterSpacing: 4, textAlign: 'center', fontWeight: '700' },
-    container: { flex: 1, backgroundColor: '#f04f8', padding: 16 },
+    container: { flex: 1, backgroundColor: '#f4f4f8', padding: 16 },
     title: { fontSize: 24, fontWeight: '800', marginBottom: 16, color: '#1a1a2e' },
     orderCard: { 
         backgroundColor: '#fff', 
@@ -391,5 +421,47 @@ export default function InventoryScreen() {
         borderWidth: 1,
         borderColor: '#e0e0e0',
         color: '#333'
+    },
+    searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    color: '#333'
+},
+
+    categoryChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#eee',
+        borderWidth: 1,
+        borderColor: '#ddd'
+    },
+
+    categoryChipSelected: {
+        backgroundColor: '#FF6B35',
+        borderColor: '#FF6B35'
+    },
+
+    categoryChipText: {
+        color: '#666',
+        fontWeight: '500',
+        textTransform: 'capitalize'
+    },
+
+    categoryChipTextSelected: {
+        color: '#fff',
+        fontWeight: '700'
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 6,
+        marginTop: 4,
+        marginLeft: 2,
     },
 });

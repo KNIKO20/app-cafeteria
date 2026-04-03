@@ -6,4 +6,4 @@ class GetPendingOrdersUseCase:
 
     def execute(self):
         # Esta lógica la usará el personal de cafetería
-        return self.order_repository.find_pending()
+        return self.order_repository.find_pending_orders()

@@ -95,7 +95,7 @@ class UpdateInventoryView(APIView):
 
 class PendingOrdersView(APIView):
     """Panel del administrador: ver pedidos pendientes"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    #permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
         use_case = get_pending_orders_use_case()
