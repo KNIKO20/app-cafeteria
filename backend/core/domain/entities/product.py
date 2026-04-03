@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import Optional
 from enum import Enum
 
+from core.domain.exceptions.domain_exceptions import InsufficientStockException
+
 class ProductCategory(Enum):
     BOCADILLO = "bocadillo"
     BEBIDA = "bebida"
@@ -24,10 +26,13 @@ class Product:
     stock: Optional[int] = None         # None = sin límite de stock
     #puede ser null/None o int
     preparation_minutes: int = 5        # Tiempo estimado de preparación
+    is_deleted: bool = False
     
     # debe devolver un bool
     def is_in_stock(self) -> bool:
-        """Regla de negocio: un producto está disponible si está activo y tiene stock"""
+        """Un producto está en stock si no está borrado, está activo y hay unidades"""
+        if self.is_deleted: # Si está borrado, nunca está en stock
+            return False
         if not self.is_available:
             return False
         if self.stock is not None and self.stock <= 0:
@@ -38,5 +43,5 @@ class Product:
         """Reduce el stock al hacer un pedido"""
         if self.stock is not None:
             if self.stock < quantity:
-                raise ValueError(f"Stock insuficiente para {self.name}")
+                raise InsufficientStockException(product_name=self.name,current_stock=self.stock)
             self.stock -= quantity

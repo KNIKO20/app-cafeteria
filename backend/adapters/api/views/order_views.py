@@ -11,7 +11,7 @@ from core.application.use_cases.create_order import CreateOrderInput
 from config.di_container import get_create_order_use_case, get_process_payment_use_case
 
 class CreateOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     
     def post(self, request):
         try:
@@ -78,4 +78,4 @@ class UserOrdersView(APIView):
             "created_at": o.created_at.isoformat(),
             "items": [{"name": i.product_name, "qty": i.quantity, "price": i.unit_price}
                       for i in o.items]
-        } for o in orders])
+        } for o in orders], status=200)
