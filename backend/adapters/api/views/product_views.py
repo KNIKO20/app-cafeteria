@@ -3,15 +3,15 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from config.di_container import get_product_repo
+from config.di_container import get_menu_use_case
 
 class ProductListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         try:
-            repo = get_product_repo()
-            products = repo.find_all_available()
+            repo = get_menu_use_case()
+            products = repo.execute(request.data.get("category"))
             return Response([{
                 "id": p.id,
                 "name": p.name,

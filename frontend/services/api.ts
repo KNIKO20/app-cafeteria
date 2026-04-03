@@ -37,7 +37,7 @@ export const processPayment = (orderId: string, paymentToken: string) =>
 
 // ── Admin ──────────────────────────────────────────────
 export const getPendingOrders = () =>
-  api.get('/admin/orders/').then(r => r.data);
+  api.get('/admin/orders/pending/').then(r => r.data);
 
 export const updateOrderStatus = (orderId: string, status: string) =>
   api.patch(`/admin/orders/${orderId}/status/`, { status }).then(r => r.data);
@@ -45,6 +45,20 @@ export const updateOrderStatus = (orderId: string, status: string) =>
 export const verifyPickupCode = (code: string) =>
   api.post('/admin/verify-code/', { code }).then(r => r.data);
 
+export const createProduct = (productData: any)=>
+  api.post('/admin/products/', productData ).then(r=>r.data)
+
+export const getInventory = ()=>
+  api.get('/admin/products/').then(r=>r.data)
+
+export const updateProduct = (productId: string, data: any) =>
+  api.put(`/admin/products/${productId}/`, data).then(r => r.data);
+
+export const deleteProduct = (productId: string)=>
+  api.delete(`/admin/products/${productId}/`).then(r=>r.data)
+
+export const updateStockProduct = (productId: string, quantity: number | null)=>
+  api.patch(`/admin/products/${productId}/inventory/`, { "quantity" : quantity }).then(r=>r.data)
 // ── Auth ───────────────────────────────────────────────
 export const loginWithGoogle = (googleToken: string) =>
   api.post('/auth/google/', { token: googleToken }).then(r => r.data);

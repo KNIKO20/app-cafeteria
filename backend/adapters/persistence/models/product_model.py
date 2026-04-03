@@ -9,7 +9,7 @@ class ProductDocument(Document):
             
         ]
     }
-    objects: QuerySet["ProductDocument"]
+    objects: QuerySet
 
     product_id = StringField(required=True, unique=True)
     name = StringField(required=True)
@@ -20,5 +20,6 @@ class ProductDocument(Document):
     is_available = BooleanField(default=True)
     stock = IntField(null=True)
     preparation_minutes = IntField()
+    is_deleted = BooleanField(default=False)
 
     
