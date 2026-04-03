@@ -23,9 +23,39 @@ class LoginWithGoogleUseCase:
         y devuelve la información y un JWT.
         """
         # 1. Verificar token en el AuthProvider
-        # 2. Buscar si el usuario ya existe en UserRepository
-        # 3. Si no existe, crearlo
-        # 4. Generar JWT (implementar lógica)
-        # 5. Retornar LoginOutput
+        user_info = self.auth_provider.verify_token(google_token)
         
-        raise NotImplementedError("Implementar la lógica del caso de uso.")
+        # 2. Buscar si el usuario ya existe en UserRepository
+        user = self.user_repo.find_by_email(user_info.email)
+        
+        # 3. Si no existe, crearlo
+        if not user:
+            user = User(
+                id=user_info.email,
+                email=user_info.email,
+                name=user_info.name,
+                role=UserRole.STUDENT,
+                avatar_url=user_info.avatar_url
+            )
+            self.user_repo.save(user)
+            
+        if not user.is_active:
+            from core.domain.exceptions.auth_exceptions import InactiveUserError
+            raise InactiveUserError("El usuario está inactivo")
+
+        # 4. Generar JWT (implementación simple sin depender de PyJWT para evitar dependencias por ahora)
+        import base64
+        import json
+        payload = {"user_id": user.id, "role": user.role.value}
+        encoded_payload = base64.b64encode(json.dumps(payload).encode()).decode()
+        jwt_token = f"header.{encoded_payload}.signature"
+        
+        # 5. Retornar LoginOutput
+        return LoginOutput(
+            token=jwt_token,
+            user_id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role.value
+        )
+

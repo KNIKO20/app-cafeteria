@@ -10,35 +10,34 @@ from rest_framework.permissions import IsAuthenticated
 from core.application.use_cases.create_order import CreateOrderInput
 from config.di_container import get_create_order_use_case, get_process_payment_use_case
 
+
 class CreateOrderView(APIView):
-    #permission_classes = [IsAuthenticated]
-    
+    # ¡ACTIVAMOS LA AUTENTICACIÓN! Solo usuarios con JWT pueden crear pedidos
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         try:
             use_case = get_create_order_use_case()
-            
-            # Construir el input desde el request HTTP
+
+            # El ID del usuario ahora viene seguro desde el token validado
             input_data = CreateOrderInput(
                 user_id=str(request.user.id),
                 items=request.data.get("items", []),
                 pickup_timeslot_id=request.data.get("pickup_timeslot_id"),
                 pickup_date=request.data.get("pickup_date"),
             )
-            
-            # Ejecutar el caso de uso
+
             result = use_case.execute(input_data)
-            
-            # Devolver respuesta HTTP
+
             return Response({
                 "order_id": result.order_id,
                 "pickup_code": result.pickup_code,
                 "total": result.total,
                 "status": result.status
             }, status=status.HTTP_201_CREATED)
-        
+
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
         except Exception as e:
             return Response({"error": "Error interno"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -38,3 +38,11 @@ class FakeProductRepository(ProductRepository):
         product = self._products.get(product_id)
         if product and product.stock is not None:
             product.stock += quantity_change
+
+    def delete(self, product_id: str):
+        if product_id in self._products:
+            del self._products[product_id]
+
+    def find_all(self) -> List[Product]:
+        return list(self._products.values())
+
