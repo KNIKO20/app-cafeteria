@@ -22,7 +22,7 @@ class ProcessPaymentUseCase:
         order = self.order_repo.find_by_id(input_data.order_id)
         if not order:
             raise ValueError("Pedido no encontrado")
-        
+        print(order)
         # 2. Procesar el pago
         result = self.payment_gateway.process_payment(
             amount=order.total,

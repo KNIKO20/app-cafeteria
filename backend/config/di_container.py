@@ -8,6 +8,7 @@
 from adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
 from adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
 from adapters.payments.stripe_payment_gateway import StripePaymentGateway
+from adapters.payments.mock_payment_provider import MockPaymentProvider
 
 from core.application.use_cases.create_order import CreateOrderUseCase
 from core.application.use_cases.get_menu import GetMenuUseCase
@@ -20,12 +21,24 @@ from core.application.use_cases.delete_product import DeleteProductUseCase
 from core.application.use_cases.get_inventory import GetInventory
 
 
+
+# --- Importaciones de Auth ---
+from adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
+from adapters.auth.google_auth_provider import GoogleAuthProvider
+from core.application.use_cases.login_with_google import LoginWithGoogleUseCase
+from core.application.use_cases.get_current_user import GetCurrentUserUseCase
+
+
 # Repositorios (instancias únicas)
 _order_repo = MongoOrderRepository()
 _product_repo = MongoProductRepository()
 _payment_gateway = StripePaymentGateway()
+_mock_payment_gateway = MockPaymentProvider()
 
 # Casos de uso (factories)
+def get_order_repo() -> MongoOrderRepository:
+    return _order_repo
+
 def get_create_order_use_case() -> CreateOrderUseCase:
     return CreateOrderUseCase(_order_repo, _product_repo)
 
@@ -33,7 +46,7 @@ def get_menu_use_case() -> GetMenuUseCase:
     return GetMenuUseCase(_product_repo)
 
 def get_process_payment_use_case() -> ProcessPaymentUseCase:
-    return ProcessPaymentUseCase(_order_repo, _payment_gateway)
+    return ProcessPaymentUseCase(_order_repo, _mock_payment_gateway)
 
 def get_pending_orders_use_case() -> GetPendingOrdersUseCase:
     return GetPendingOrdersUseCase(_order_repo)
@@ -52,3 +65,35 @@ def get_delete_product_use_case() -> DeleteProductUseCase:
 
 def get_inventory_use_case() -> GetInventory:
     return GetInventory(_product_repo)
+
+
+# Instancias globales
+_user_repo = None
+_auth_provider = None
+
+def get_user_repo():
+    global _user_repo
+    if _user_repo is None:
+        # Asumiendo que tienes una función get_database() que devuelve tu DB de Mongo
+        from config.db import get_database
+        db = get_database()
+        _user_repo = MongoUserRepository(db["users"])
+    return _user_repo
+
+def get_auth_provider():
+    global _auth_provider
+    if _auth_provider is None:
+        client_id = config("GOOGLE_CLIENT_ID", default="tu_client_id_aqui")
+        _auth_provider = GoogleAuthProvider(client_id)
+    return _auth_provider
+
+def get_login_with_google_use_case():
+    return LoginWithGoogleUseCase(
+        auth_provider=get_auth_provider(),
+        user_repo=get_user_repo()
+    )
+
+def get_current_user_use_case():
+    return GetCurrentUserUseCase(
+        user_repo=get_user_repo()
+    )

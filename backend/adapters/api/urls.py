@@ -37,4 +37,8 @@ urlpatterns = [
     
     # POST: Verificar el código que trae el alumno
     path('admin/orders/verify/', VerifyPickupCodeView.as_view(), name='admin-order-verify'),
+    # Rutas de Autenticación
+    path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
+    path('auth/me/', MeView.as_view(), name='auth-me'),
+]
 ]
