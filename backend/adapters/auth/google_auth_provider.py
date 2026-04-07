@@ -10,7 +10,7 @@ class GoogleAuthProvider(AuthProvider):
     def verify_token(self, token: str) -> UserInfo:
         try:
             # Verifica el token directamente con Google
-            idinfo = id_token.verify_oauth2_token(token, requests.Request(), self.client_id)
+            idinfo = id_token.verify_oauth2_token(token, requests.Request(), self.client_id, clock_skew_in_seconds=10)
 
             # Devuelve UserInfo (dataclass del puerto), no un dict
             return UserInfo(
@@ -18,5 +18,5 @@ class GoogleAuthProvider(AuthProvider):
                 name=idinfo.get("name", ""),
                 avatar_url=idinfo.get("picture", "")
             )
-        except ValueError:
-            raise ValueError("El token de Google es inválido o ha expirado.")
+        except ValueError as e:
+            raise ValueError(f"Autorización denegada por Google: {e}")

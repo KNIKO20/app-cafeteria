@@ -27,6 +27,9 @@ class ProductListView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
-            return Response({"error": "Error interno"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            import traceback
+            with open("get_menu_error_log.txt", "w") as f:
+                f.write(traceback.format_exc())
+            return Response({"error": "Error interno al cargar menú."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
        

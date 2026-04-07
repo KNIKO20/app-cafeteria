@@ -22,11 +22,13 @@ class GoogleLoginView(APIView):
             access_token = use_case.execute(token)
             return Response({"access_token": access_token}, status=status.HTTP_200_OK)
         except ValueError as e:
+            with open("google_auth_error_log.txt", "w") as f:
+                f.write(f"ValueError: {str(e)}\nToken Recibido: {token}")
             return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         except UserInactiveError as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
-            return Response({"error": "Error interno del servidor"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Error interno al iniciar sesión."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class MeView(APIView):
