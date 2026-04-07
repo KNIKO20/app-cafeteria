@@ -40,9 +40,9 @@ export default function LoginScreen() {
 
       // 4. Redirigir
       if (userProfile.is_admin) {
-        router.replace('/(admin)/orders');
+        router.replace('/(admin)/dashboard');
       } else {
-        router.replace('/(student)/products');
+        router.replace('/(student)');
       }
     } catch (error) {
       console.error(error);

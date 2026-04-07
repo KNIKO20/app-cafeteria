@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+import jwt
+
 from core.domain.ports.user_repository import UserRepository
 from core.domain.ports.auth_provider import AuthProvider
 from core.domain.entities.user import User, UserRole
@@ -17,12 +20,12 @@ class LoginWithGoogleUseCase:
         self.user_repo = user_repo
         self.auth_provider = auth_provider
         
-    def execute(self, google_token: str) -> LoginOutput:
+    def execute(self, google_token: str) -> str:
         """
         Verifica el token de Google, busca o crea el usuario, 
-        y devuelve la información y un JWT.
+        y devuelve un JWT firmado con la SECRET_KEY de Django.
         """
-        # 1. Verificar token en el AuthProvider
+        # 1. Verificar token en el AuthProvider (devuelve UserInfo)
         user_info = self.auth_provider.verify_token(google_token)
         
         # 2. Buscar si el usuario ya existe en UserRepository
@@ -40,22 +43,19 @@ class LoginWithGoogleUseCase:
             self.user_repo.save(user)
             
         if not user.is_active:
-            from core.domain.exceptions.auth_exceptions import InactiveUserError
-            raise InactiveUserError("El usuario está inactivo")
+            from core.domain.exceptions.auth_exceptions import UserInactiveError
+            raise UserInactiveError("El usuario está inactivo")
 
-        # 4. Generar JWT (implementación simple sin depender de PyJWT para evitar dependencias por ahora)
-        import base64
-        import json
-        payload = {"user_id": user.id, "role": user.role.value}
-        encoded_payload = base64.b64encode(json.dumps(payload).encode()).decode()
-        jwt_token = f"header.{encoded_payload}.signature"
+        # 4. Generar JWT real con PyJWT
+        from django.conf import settings
+        payload = {
+            "user_id": user.id,
+            "role": user.role.value,
+            "exp": datetime.utcnow() + timedelta(days=7),
+            "iat": datetime.utcnow(),
+        }
+        jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
         
-        # 5. Retornar LoginOutput
-        return LoginOutput(
-            token=jwt_token,
-            user_id=user.id,
-            email=user.email,
-            name=user.name,
-            role=user.role.value
-        )
+        return jwt_token
+
 

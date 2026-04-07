@@ -23,6 +23,7 @@ from core.application.use_cases.get_inventory import GetInventory
 
 
 # --- Importaciones de Auth ---
+from decouple import config
 from adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
 from adapters.auth.google_auth_provider import GoogleAuthProvider
 from core.application.use_cases.login_with_google import LoginWithGoogleUseCase

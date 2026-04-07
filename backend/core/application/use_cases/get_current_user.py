@@ -1,5 +1,6 @@
 from core.domain.ports.user_repository import UserRepository
 from core.domain.entities.user import User
+from core.domain.exceptions.auth_exceptions import UserNotFoundError
 
 class GetCurrentUserUseCase:
     
@@ -11,8 +12,8 @@ class GetCurrentUserUseCase:
         Obtiene el perfil del usuario autenticado.
         Lanza un error si no se encuentra.
         """
-        # 1. Buscar el usuario mediante el repositorio
-        # 2. Si no existe, lanzar excepción
-        # 3. Retornar el usuario
-        
-        raise NotImplementedError("Implementar la lógica del caso de uso.")
+        user = self.user_repo.find_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"Usuario con id '{user_id}' no encontrado.")
+        return user
+

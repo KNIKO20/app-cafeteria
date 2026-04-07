@@ -25,7 +25,7 @@ export default function Layout() {
       // Retrasamos un milisegundo la navegación para evitar el choque con el montaje
       setTimeout(() => router.replace('/(auth)/login'), 1);
     } else if (isAuthenticated && inAuthGroup) {
-      const destination = user?.is_admin ? '/(admin)/orders' : '/(student)/products';
+      const destination = user?.is_admin ? '/(admin)/dashboard' : '/(student)';
       setTimeout(() => router.replace(destination), 1);
     }
   }, [isAuthenticated, segments, isReady]);
@@ -33,8 +33,13 @@ export default function Layout() {
   return (
     <Stack>
       <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-      <Stack.Screen name="(student)/products" options={{ title: 'Menú Cafetería' }} />
-      <Stack.Screen name="(admin)/orders" options={{ title: 'Panel Admin' }} />
+      <Stack.Screen name="(auth)/logout" options={{ headerShown: false }} />
+      <Stack.Screen name="(student)/index" options={{ title: 'Menú Cafetería' }} />
+      <Stack.Screen name="(student)/cart" options={{ title: 'Tu Pedido' }} />
+      <Stack.Screen name="(student)/orders" options={{ title: 'Mis Pedidos' }} />
+      <Stack.Screen name="(student)/payment" options={{ title: 'Pago' }} />
+      <Stack.Screen name="(admin)/dashboard" options={{ title: 'Panel Admin' }} />
+      <Stack.Screen name="(admin)/inventory" options={{ title: 'Inventario' }} />
     </Stack>
   );
 }

@@ -60,9 +60,11 @@ mongoengine.connect(
 )
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'adapters.api.auth.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny', # cambiar cuando tnegamos el sistema de autenticacion
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 
