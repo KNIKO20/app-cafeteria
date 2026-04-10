@@ -1,191 +1,200 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  RefreshControl, 
-  ActivityIndicator, 
-  TouchableOpacity
+// Pantalla "Mis Pedidos" — paleta verde, sin emojis, repetir pedido.
+
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet, RefreshControl, Alert,
 } from 'react-native';
-import { getMyOrders } from '../../services/api';
 import { router } from 'expo-router';
+import { getMyOrders } from '../../services/api';
+import { useCartStore } from '../../stores/cartStore';
 
-interface OrderItem {
-  price: number;
-  name: string;
-  product_name: string;
-  quantity: number;
-}
+const C = {
+  dark:  '#1E3932',
+  mid:   '#00754A',
+  light: '#D4E9E2',
+  white: '#FFFFFF',
+  bg:    '#F2F0EB',
+  muted: '#6B8E7F',
+};
 
+interface OrderItem { product_id: string; name: string; qty: number; price: number; }
 interface Order {
-  id: string;
-  total: number;
-  status: string;
-  pickup_code: string | null;
-  items: OrderItem[];
-  created_at: string;
+  id: string; created_at: string;
+  status: 'pending' | 'paid' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  total: number; pickup_code?: string; pickup_timeslot?: string; items: OrderItem[];
 }
 
-export default function MyOrdersScreen() {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+const STATUS: Record<string, { label: string; textColor: string; bg: string }> = {
+  pending:   { label: 'Pendiente',  textColor: '#856404', bg: '#fff3cd' },
+  paid:      { label: 'Pagado',     textColor: '#155724', bg: C.light   },
+  preparing: { label: 'Preparando', textColor: '#0c5460', bg: '#d1ecf1' },
+  ready:     { label: 'Listo',      textColor: C.mid,    bg: C.light   },
+  delivered: { label: 'Entregado',  textColor: C.muted,  bg: '#f0f0f0' },
+  cancelled: { label: 'Cancelado',  textColor: '#721c24', bg: '#f8d7da' },
+};
 
-    const fetchOrders = async () => {
-        try {
-        const data = await getMyOrders();
-        setOrders(data);
-        } catch (error) {
-        console.error("Error fetching orders:", error);
-        } finally {
-        setLoading(false);
-        setRefreshing(false);
-        }
-    };
+function fmt(iso: string) {
+  return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+function OrderCard({ order, onRepeat }: { order: Order; onRepeat: () => void }) {
+  const [open, setOpen] = useState(false);
+  const cfg = STATUS[order.status] ?? STATUS.pending;
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchOrders();
-    };
+  return (
+    <TouchableOpacity style={s.card} onPress={() => setOpen(v => !v)} activeOpacity={0.85}>
+      {/* Cabecera */}
+      <View style={s.cardTop}>
+        <View>
+          <Text style={s.cardDate}>{fmt(order.created_at)}</Text>
+          {order.pickup_code
+            ? <Text style={s.code}>Código: <Text style={s.codeBold}>{order.pickup_code}</Text></Text>
+            : null
+          }
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <View style={[s.badge, { backgroundColor: cfg.bg }]}>
+            <Text style={[s.badgeText, { color: cfg.textColor }]}>{cfg.label}</Text>
+          </View>
+          <Text style={s.total}>{order.total.toFixed(2)} €</Text>
+        </View>
+      </View>
 
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-        case 'paid': return '#2ecc71';
-        case 'preparing': return '#3498db';
-        case 'ready': return '#f1c40f';
-        case 'delivered': return '#95a5a6';
-        default: return '#e67e22';
-        }
-    };
+      {/* Resumen en una línea */}
+      <Text style={s.summary} numberOfLines={open ? undefined : 1}>
+        {order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+      </Text>
 
-    const renderItem = ({ item }: { item: Order }) => (
-        <View style={styles.card}>
-        <View style={styles.cardHeader}>
-            <Text style={styles.date}>
-            {new Date(item.created_at).toLocaleDateString()}
-            </Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+      {/* Detalle expandido */}
+      {open && (
+        <View style={s.detail}>
+          {order.items.map((i, idx) => (
+            <View key={idx} style={s.detailRow}>
+              <Text style={s.detailName}>{i.name}</Text>
+              <Text style={s.detailQty}>{i.qty} ud</Text>
+              <Text style={s.detailPrice}>{(i.price * i.qty).toFixed(2)} €</Text>
             </View>
+          ))}
+          {order.pickup_timeslot
+            ? <Text style={s.slotInfo}>Recogida: {order.pickup_timeslot}</Text>
+            : null
+          }
         </View>
+      )}
 
-        <View style={styles.itemsList}>
-            {item.items.map((prod, index) => (
-                <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ color: '#444' }}>
-                        <Text style={{ fontWeight: 'bold' }}>{prod.quantity}x</Text> {prod.name}
-                    </Text>
-                    <Text style={{ color: '#888', fontStyle: 'italic' }}>
-                        {prod.price}€/ud
-                    </Text>
-                </View>
-            ))}
-        </View>
+      {/* Pie */}
+      <View style={s.footer}>
+        <Text style={s.expandHint}>{open ? 'Ocultar detalle' : 'Ver detalle'}</Text>
+        <TouchableOpacity style={s.repeatBtn} onPress={(e) => { e.stopPropagation?.(); onRepeat(); }}>
+          <Text style={s.repeatText}>Repetir pedido</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
-        {/* BOTÓN CONDICIONAL PARA PAGAR */}
-        {item.status.toLowerCase() === 'pending_payment' && (
-            <TouchableOpacity 
-                style={styles.payNowButton}
-                onPress={() => router.push({
-                    pathname: '/(student)/payment',
-                    params: { orderId: item.id, total: item.total }
-                })}
-            >
-                <Text style={styles.payNowText}>💳 Finalizar Pago ({item.total}€)</Text>
-            </TouchableOpacity>
-        )}
+export default function OrdersScreen() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const { addItem, clearCart, itemCount } = useCartStore();
 
-        <View style={styles.footer}>
-            <View>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{item.total}€</Text>
-            </View>
-            
-            {item.pickup_code && (
-            <View style={styles.codeContainer}>
-                <Text style={styles.codeLabel}>CÓDIGO</Text>
-                <Text style={styles.codeValue}>{item.pickup_code}</Text>
-            </View>
-            )}
-        </View>
-        </View>
-    );
-
-    if (loading) {
-        return (
-        <View style={styles.center}>
-            <ActivityIndicator size="large" color="#FF6B35" />
-        </View>
-        );
+  const load = useCallback(async () => {
+    try {
+      const data = await getMyOrders();
+      setOrders([...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    } catch {
+      Alert.alert('Error', 'No se pudieron cargar tus pedidos.');
     }
+  }, []);
 
+  useEffect(() => { load(); }, []);
+
+  const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  const handleRepeat = (order: Order) => {
+    const doIt = () => {
+      clearCart();
+      order.items.forEach(i => addItem({ product_id: i.product_id, product_name: i.name, price: i.price, quantity: i.qty }));
+      router.push('/(student)/cart');
+    };
+    if (itemCount() > 0) {
+      Alert.alert('Carrito con artículos', '¿Reemplazar el carrito con este pedido?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Reemplazar', style: 'destructive', onPress: doIt },
+      ]);
+    } else { doIt(); }
+  };
+
+  if (orders.length === 0 && !refreshing) {
     return (
-        <View style={styles.container}>
-        <Text style={styles.title}>Mis Pedidos</Text>
-        <FlatList
-            data={orders}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            ListEmptyComponent={
-            <Text style={styles.emptyText}>Aún no has realizado pedidos.</Text>
-            }
-            contentContainerStyle={{ paddingBottom: 20 }}
-        />
-        </View>
+      <View style={s.empty}>
+        <Text style={s.emptyTitle}>Sin pedidos todavía</Text>
+        <Text style={s.emptySub}>Cuando hagas tu primer pedido aparecerá aquí.</Text>
+        <TouchableOpacity style={s.goBtn} onPress={() => router.push('/(student)/index')}>
+          <Text style={s.goBtnText}>Ir al menú</Text>
+        </TouchableOpacity>
+      </View>
     );
-    }
+  }
 
-    const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa', padding: 16 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    title: { fontSize: 24, fontWeight: '800', color: '#1a1a2e', marginBottom: 20, marginTop: 40 },
-    card: { 
-        backgroundColor: '#fff', 
-        borderRadius: 15, 
-        padding: 16, 
-        marginBottom: 16, 
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 10
-    },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-    date: { color: '#999', fontSize: 12, fontWeight: '600' },
-    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    statusText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-    itemsList: { marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 10 },
-    itemLine: { fontSize: 14, color: '#444', marginBottom: 4 },
-    footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    totalLabel: { fontSize: 10, color: '#999', textTransform: 'uppercase' },
-    totalValue: { fontSize: 18, fontWeight: '800', color: '#1a1a2e' },
-    codeContainer: { backgroundColor: '#f0f4f8', padding: 8, borderRadius: 10, alignItems: 'center', minWidth: 80 },
-    codeLabel: { fontSize: 9, color: '#3498db', fontWeight: '800' },
-    codeValue: { fontSize: 20, fontWeight: '900', color: '#1a1a2e', letterSpacing: 1 },
-    emptyText: { textAlign: 'center', color: '#999', marginTop: 40 },
-    payNowButton: {
-        backgroundColor: '#FF6B35',
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: 'center',
-        marginTop: 10,
-        shadowColor: '#FF6B35',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 3,
-        marginBottom: 10
-    },
-    payNowText: {
-        color: '#fff',
-        fontWeight: '800',
-        fontSize: 14,
-    },
-    });
+  return (
+    <View style={s.container}>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Mis Pedidos</Text>
+        <Text style={s.headerCount}>{orders.length} pedido{orders.length !== 1 ? 's' : ''}</Text>
+      </View>
+
+      <FlatList
+        data={orders}
+        keyExtractor={o => o.id}
+        renderItem={({ item }) => <OrderCard order={item} onRepeat={() => handleRepeat(item)} />}
+        contentContainerStyle={s.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.mid} />}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  container:   { flex: 1, backgroundColor: C.bg },
+  header:      { backgroundColor: C.dark, paddingTop: 20, paddingBottom: 20, paddingHorizontal: 20 },
+  headerTitle: { fontSize: 24, fontWeight: '900', color: C.white },
+  headerCount: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+  list:        { padding: 16, paddingBottom: 40 },
+
+  card:        {
+    backgroundColor: C.white, borderRadius: 14, marginBottom: 12, padding: 16,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
+  },
+  cardTop:     { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  cardDate:    { fontSize: 13, color: C.muted, fontWeight: '600' },
+  code:        { fontSize: 13, color: '#555', marginTop: 2 },
+  codeBold:    { fontWeight: '800', color: C.mid },
+  badge:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeText:   { fontSize: 12, fontWeight: '700' },
+  total:       { fontSize: 20, fontWeight: '900', color: C.dark },
+  summary:     { fontSize: 13, color: C.muted, marginBottom: 10, lineHeight: 18 },
+
+  detail:      { backgroundColor: C.bg, borderRadius: 10, padding: 12, marginBottom: 10, gap: 6 },
+  detailRow:   { flexDirection: 'row', alignItems: 'center' },
+  detailName:  { flex: 1, fontSize: 14, color: C.dark, fontWeight: '500' },
+  detailQty:   { fontSize: 13, color: C.muted, marginRight: 8 },
+  detailPrice: { fontSize: 14, fontWeight: '700', color: C.dark, minWidth: 52, textAlign: 'right' },
+  slotInfo:    { fontSize: 12, color: C.muted, marginTop: 4 },
+
+  footer:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 },
+  expandHint:  { fontSize: 12, color: '#ccc', fontWeight: '600' },
+  repeatBtn:   {
+    backgroundColor: C.light, paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 10, borderWidth: 1, borderColor: C.mid,
+  },
+  repeatText:  { color: C.mid, fontWeight: '700', fontSize: 13 },
+
+  empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12, backgroundColor: C.bg },
+  emptyTitle:  { fontSize: 22, fontWeight: '800', color: C.dark },
+  emptySub:    { fontSize: 15, color: C.muted, textAlign: 'center', lineHeight: 22 },
+  goBtn:       { marginTop: 8, backgroundColor: C.mid, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12 },
+  goBtnText:   { color: C.white, fontWeight: '700', fontSize: 15 },
+});
