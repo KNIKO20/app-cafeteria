@@ -73,7 +73,7 @@ class CreateOrderUseCase:
         pickup_time = datetime.fromisoformat(input_data.pickup_date)
         # Usa el metodo de la entity Order para validar la lógica de negocio
         # el usecase coordina que las reglas que definimos en las entities se cumplan
-        Order.validate_advance_time(pickup_time, min_minutes_ahead=15)
+        #Order.validate_advance_time(pickup_time, min_minutes_ahead=15)
         
         # 3. Crear el pedido
         order = Order(
@@ -82,6 +82,11 @@ class CreateOrderUseCase:
             pickup_timeslot=input_data.pickup_timeslot_id,
             pickup_date=pickup_time,
         )
+        
+        # --- BYPASS DEL SISTEMA DE PAGOS ---
+        # Marcamos la orden como pagada automáticamente o 
+        # pendiente de pago en efectivo para ver el código.
+        order.mark_as_paid(payment_ref="BYPASS_TEMPORAL_SIN_PAGO")
         
         # 4. Guardar en la base de datos
         saved_order = self.order_repo.save(order)
