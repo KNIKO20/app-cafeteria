@@ -35,8 +35,8 @@ from core.application.use_cases.get_current_user import GetCurrentUserUseCase
 from core.domain.entities.product import Product, ProductCategory
 
 # Repositorios (instancias únicas EN MEMORIA)
-_order_repo = MongoOrderRepository()
-_product_repo = MongoProductRepository()
+_order_repo = FakeOrderRepository()
+_product_repo = FakeProductRepository()
 
 _product_repo.save(Product(id="p1", name="Bocadillo Jamón", price=3.50, description="Delicioso bocadillo.", category=ProductCategory.BOCADILLO, preparation_minutes=5, is_available=True, image_url="https://via.placeholder.com/150", stock=50))
 _product_repo.save(Product(id="p2", name="Café con Leche", price=1.20, description="Recién molido.", category=ProductCategory.BEBIDA, preparation_minutes=2, is_available=True, image_url="https://via.placeholder.com/150", stock=100))
@@ -45,7 +45,7 @@ _payment_gateway = StripePaymentGateway()
 _mock_payment_gateway = MockPaymentProvider()
 
 # Casos de uso (factories)
-def get_order_repo() -> MongoOrderRepository:
+def get_order_repo() -> FakeOrderRepository:
     return _order_repo
 
 def get_create_order_use_case() -> CreateOrderUseCase:
@@ -83,7 +83,7 @@ _auth_provider = None
 def get_user_repo():
     global _user_repo
     if _user_repo is None:
-        _user_repo = MongoUserRepository()
+        _user_repo = FakeUserRepository()
     return _user_repo
 
 def get_auth_provider():
