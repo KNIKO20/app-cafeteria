@@ -9,8 +9,6 @@ Django==6.0.3
 django-cors-headers==4.9.0
 djangorestframework==3.17.1
 dnspython==2.8.0
-google==3.0.0
-google-auth==2.49.1
 idna==3.11
 iniconfig==2.3.0
 jwt==1.4.0
@@ -29,4 +27,6 @@ soupsieve==2.8.3
 sqlparse==0.5.5
 typing_extensions==4.15.0
 tzdata==2025.3
+PyJWT==2.8.0
+google-auth==2.26.2
 urllib3==2.6.3

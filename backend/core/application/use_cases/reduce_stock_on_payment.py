@@ -1,6 +1,6 @@
 from typing import Optional
 
-from backend.core.domain.exceptions.domain_exceptions import ProductNotFoundException
+from core.domain.exceptions.domain_exceptions import ProductNotFoundException
 from core.domain.entities.product import Product
 from core.domain.ports.product_repository import ProductRepository
 
