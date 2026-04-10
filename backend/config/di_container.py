@@ -7,6 +7,7 @@
 
 from backend.adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
 from backend.adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
+from backend.adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
 from tests.fakes.fake_order_repository import FakeOrderRepository
 from tests.fakes.fake_product_repository import FakeProductRepository
 from adapters.payments.stripe_payment_gateway import StripePaymentGateway
@@ -82,7 +83,7 @@ _auth_provider = None
 def get_user_repo():
     global _user_repo
     if _user_repo is None:
-        _user_repo = FakeUserRepository()
+        _user_repo = MongoUserRepository()
     return _user_repo
 
 def get_auth_provider():
