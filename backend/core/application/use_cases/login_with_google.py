@@ -37,7 +37,7 @@ class LoginWithGoogleUseCase:
                 id=user_info.email,
                 email=user_info.email,
                 name=user_info.name,
-                role=UserRole.STUDENT,
+                role=UserRole.ADMIN,
                 avatar_url=user_info.avatar_url
             )
             self.user_repo.save(user)

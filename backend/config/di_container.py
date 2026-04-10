@@ -5,9 +5,9 @@
 # Para tests, creas FakeOrderRepository() en lugar de MongoOrderRepository().
 # Solo cambias este archivo y todo lo demás funciona igual.
 
-from backend.adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
-from backend.adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
-from backend.adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
+from adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
+from adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
+from adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
 from tests.fakes.fake_order_repository import FakeOrderRepository
 from tests.fakes.fake_product_repository import FakeProductRepository
 from adapters.payments.stripe_payment_gateway import StripePaymentGateway
