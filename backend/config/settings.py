@@ -55,7 +55,7 @@ MIDDLEWARE = [
 # ── MongoDB ────────────────────────────────────────────
 import mongoengine
 mongoengine.connect(
-    db=config('MONGO_DB', default='cafeteria'),
+    db=config('MONGO_DB', default='cafeteria_db'),
     host=config('MONGO_HOST', default='localhost'),
     port=config('MONGO_PORT', default=27017, cast=int),
 )
