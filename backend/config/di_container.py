@@ -8,6 +8,7 @@
 from adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
 from adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
 from adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
+from config.db import get_database
 from tests.fakes.fake_order_repository import FakeOrderRepository
 from tests.fakes.fake_product_repository import FakeProductRepository
 from adapters.payments.stripe_payment_gateway import StripePaymentGateway
@@ -83,13 +84,13 @@ _auth_provider = None
 def get_user_repo():
     global _user_repo
     if _user_repo is None:
-        _user_repo = MongoUserRepository()
+        _user_repo = MongoUserRepository(db_collection=get_database()['users'])
     return _user_repo
 
 def get_auth_provider():
     global _auth_provider
     if _auth_provider is None:
-        client_id = config("GOOGLE_CLIENT_ID", default="tu_client_id_aqui")
+        client_id = config("GOOGLE_CLIENT_ID", default="853004690083-9munvftfvk5q9s2l9belno1qvf8sv7f6.apps.googleusercontent.com")
         _auth_provider = GoogleAuthProvider(client_id)
     return _auth_provider
 

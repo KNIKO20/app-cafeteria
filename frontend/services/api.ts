@@ -55,7 +55,7 @@ export const updateOrderStatus = (orderId: string, status: string) =>
   api.patch(`/admin/orders/${orderId}/status/`, { status }).then(r => r.data);
 
 export const verifyPickupCode = (code: string) =>
-  api.post('/admin/verify-code/', { code }).then(r => r.data);
+  api.post('/admin/orders/verify/', { code }).then(r => r.data);
 
 /**
  * Confirma masivamente un lote de pedidos (los marca como 'ready').

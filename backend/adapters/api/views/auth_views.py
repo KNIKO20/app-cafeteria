@@ -28,6 +28,7 @@ class GoogleLoginView(APIView):
         except UserInactiveError as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
+            print(e)
             return Response({"error": "Error interno al iniciar sesión."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -51,4 +52,4 @@ class MeView(APIView):
         except UserNotFoundError as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": "Error interno del servidor"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Error interno del servidor"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

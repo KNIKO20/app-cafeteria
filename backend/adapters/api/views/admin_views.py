@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from adapters.auth.permissions import IsAdminRole
 from core.domain.exceptions.domain_exceptions import ProductNotFoundException
 from config.di_container import get_create_product_use_case, get_delete_product_use_case, get_pending_orders_use_case, get_update_product_use_case
 from config.di_container import get_update_inventory_use_case
@@ -10,7 +11,7 @@ from config.di_container import get_inventory_use_case
 
 class ProductManagementView(APIView):
     """Acciones generales: Listar todos (para el admin) y Crear nuevo"""
-    #permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
     def get(self, request):
         try:
             use_case = get_inventory_use_case()
@@ -43,7 +44,7 @@ class ProductManagementView(APIView):
 
 class ProductDetailAdminView(APIView):
     """Acciones específicas: Modificar datos base o Eliminar"""
-    #permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
 
     def put(self, request, product_id):
         use_case = get_update_product_use_case()
@@ -76,7 +77,7 @@ class ProductDetailAdminView(APIView):
             return Response({"error": "Error inesperado al eliminar"}, status=500)
 
 class UpdateInventoryView(APIView):
-    #permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
     def patch(self, request, product_id):
         use_case = get_update_inventory_use_case()
         
@@ -95,7 +96,7 @@ class UpdateInventoryView(APIView):
 
 class PendingOrdersView(APIView):
     """Panel del administrador: ver pedidos pendientes"""
-    #permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
     
     def get(self, request):
         use_case = get_pending_orders_use_case()
@@ -112,7 +113,7 @@ class PendingOrdersView(APIView):
 
 class UpdateOrderStatusView(APIView):
     """El admin cambia el estado del pedido"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
     
     def patch(self, request, order_id):
         """
@@ -140,7 +141,7 @@ class UpdateOrderStatusView(APIView):
 
 class VerifyPickupCodeView(APIView):
     """Verifica el código QR/numérico al entregar el pedido"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    Permission_classes = [IsAdminRole]
     
     def post(self, request):
         code = request.data.get("code")

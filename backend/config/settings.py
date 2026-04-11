@@ -10,6 +10,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 ROOT_URLCONF = 'config.urls'
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+ADMIN_EMAILS = config('ADMIN_EMAILS', default='').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',         
@@ -75,5 +76,5 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # ── Variables de entorno ───────────────────────────────
-#GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')

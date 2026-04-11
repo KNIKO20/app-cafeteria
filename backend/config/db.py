@@ -18,7 +18,7 @@ def get_database():
     if _db is None:
         host = config('MONGO_HOST', default='localhost')
         port = config('MONGO_PORT', default=27017, cast=int)
-        db_name = config('MONGO_DB', default='cafeteria')
+        db_name = config('MONGO_DB', default='cafeteria_db')
         _client = MongoClient(host, port)
         _db = _client[db_name]
     return _db

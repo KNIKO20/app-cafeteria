@@ -21,35 +21,43 @@ class LoginWithGoogleUseCase:
         self.auth_provider = auth_provider
         
     def execute(self, google_token: str) -> str:
-        """
-        Verifica el token de Google, busca o crea el usuario, 
-        y devuelve un JWT firmado con la SECRET_KEY de Django.
-        """
-        # 1. Verificar token en el AuthProvider (devuelve UserInfo)
+        from django.conf import settings
+        
+        # 1. Verificar token en el AuthProvider
         user_info = self.auth_provider.verify_token(google_token)
         
-        # 2. Buscar si el usuario ya existe en UserRepository
+        # detecta admins del .env
+        admin_list = [email.strip() for email in settings.ADMIN_EMAILS]
+        is_admin = user_info.email in admin_list
+        target_role = UserRole.ADMIN if is_admin else UserRole.STUDENT
+
+        # 2. Buscar si el usuario ya existe
         user = self.user_repo.find_by_email(user_info.email)
         
-        # 3. Si no existe, crearlo
+        # 3. Si no existe, crearlo con el rol correspondiente
         if not user:
             user = User(
                 id=user_info.email,
                 email=user_info.email,
                 name=user_info.name,
-                role=UserRole.STUDENT,
+                role=target_role, # Asignamos Admin o Student aquí
                 avatar_url=user_info.avatar_url
             )
             self.user_repo.save(user)
+        else:
+            # actualizar rol si ha cambiado en el .env desde la última vez
+            if user.role != target_role:
+                user.role = target_role
+                self.user_repo.save(user)
             
         if not user.is_active:
             from core.domain.exceptions.auth_exceptions import UserInactiveError
             raise UserInactiveError("El usuario está inactivo")
 
-        # 4. Generar JWT real con PyJWT
-        from django.conf import settings
+        # 4. Generar JWT real
         payload = {
             "user_id": user.id,
+            "email": user.email, 
             "role": user.role.value,
             "exp": datetime.utcnow() + timedelta(days=7),
             "iat": datetime.utcnow(),
