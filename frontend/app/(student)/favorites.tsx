@@ -56,7 +56,7 @@ export default function FavoritesScreen() {
       <View style={s.empty}>
         <Text style={s.emptyTitle}>Sin favoritos</Text>
         <Text style={s.emptySub}>Toca el corazón en cualquier producto para guardarlo aquí.</Text>
-        <TouchableOpacity style={s.goBtn} onPress={() => router.push('/(student)/index')}>
+        <TouchableOpacity style={s.goBtn} onPress={() => router.push('/')}>
           <Text style={s.goBtnText}>Explorar menú</Text>
         </TouchableOpacity>
       </View>
@@ -81,7 +81,7 @@ export default function FavoritesScreen() {
       />
 
       {itemCount() > 0 && (
-        <TouchableOpacity style={s.cartBtn} onPress={() => router.push('/(student)/cart')}>
+        <TouchableOpacity style={s.cartBtn} onPress={() => router.push('/cart')}>
           <Text style={s.cartBtnText}>Ver carrito ({itemCount()})</Text>
         </TouchableOpacity>
       )}

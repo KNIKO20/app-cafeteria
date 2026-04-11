@@ -2,11 +2,11 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from adapters.auth.permissions import IsAuthenticatedHex
 from config.di_container import get_menu_use_case
 
 class ProductListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedHex]
 
     def get(self, request):
         try:

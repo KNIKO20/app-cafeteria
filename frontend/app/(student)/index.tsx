@@ -190,7 +190,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={cat.slug}
               style={s.chip}
-              onPress={() => router.push({ pathname: '/(student)/category/[slug]', params: { slug: cat.slug } })}
+              onPress={() => router.push({ pathname: '/category/[slug]', params: { slug: cat.slug } })}
             >
               <Text style={s.chipText}>{cat.label}</Text>
             </TouchableOpacity>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
           <>
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Destacados</Text>
-              <TouchableOpacity onPress={() => router.push('/(student)/category/[slug]' as any)}>
+              <TouchableOpacity onPress={() => router.push('/category/[slug]' as any)}>
                 <Text style={s.seeAll}>Ver todo</Text>
               </TouchableOpacity>
             </View>

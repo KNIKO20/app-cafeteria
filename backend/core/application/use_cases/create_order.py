@@ -83,10 +83,6 @@ class CreateOrderUseCase:
             pickup_date=pickup_time,
         )
         
-        # --- BYPASS DEL SISTEMA DE PAGOS ---
-        # Marcamos la orden como pagada automáticamente o 
-        # pendiente de pago en efectivo para ver el código.
-        order.mark_as_paid(payment_ref="BYPASS_TEMPORAL_SIN_PAGO")
         
         # 4. Guardar en la base de datos
         saved_order = self.order_repo.save(order)

@@ -131,7 +131,7 @@ export default function OrdersScreen() {
       <View style={s.empty}>
         <Text style={s.emptyTitle}>Sin pedidos todavía</Text>
         <Text style={s.emptySub}>Cuando hagas tu primer pedido aparecerá aquí.</Text>
-        <TouchableOpacity style={s.goBtn} onPress={() => router.push('/(student)/index')}>
+        <TouchableOpacity style={s.goBtn} onPress={() => router.push('/')}>
           <Text style={s.goBtnText}>Ir al menú</Text>
         </TouchableOpacity>
       </View>

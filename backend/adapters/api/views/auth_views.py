@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
+from adapters.auth.permissions import IsAuthenticatedHex
 from config.di_container import get_login_with_google_use_case, get_current_user_use_case
 from core.domain.exceptions.auth_exceptions import UserNotFoundError, UserInactiveError
 
@@ -34,7 +35,7 @@ class GoogleLoginView(APIView):
 
 class MeView(APIView):
     # Solo usuarios con JWT válido pueden ver su perfil
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedHex]
 
     def get(self, request):
         try:

@@ -5,15 +5,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 
+from adapters.auth.permissions import IsAuthenticatedHex
 from core.application.use_cases.create_order import CreateOrderInput
 from config.di_container import get_create_order_use_case, get_process_payment_use_case
 
 
 class CreateOrderView(APIView):
     # ¡ACTIVAMOS LA AUTENTICACIÓN! Solo usuarios con JWT pueden crear pedidos
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedHex]
 
     def post(self, request):
         try:
@@ -42,7 +42,7 @@ class CreateOrderView(APIView):
             return Response({"error": "Error interno"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProcessPaymentView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedHex]
     
     def post(self, request, order_id):
         try:
@@ -61,7 +61,7 @@ class ProcessPaymentView(APIView):
 
 class UserOrdersView(APIView):
     """Historial de pedidos del alumno"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedHex]
     
     def get(self, request):
         from config.di_container import get_order_repo

@@ -59,8 +59,8 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
             style={d.item}
             onPress={() =>
               cat.slug === ''
-                ? go('/(student)/index')
-                : go('/(student)/category/[slug]', { slug: cat.slug })
+                ? go('/')
+                : go('/category/[slug]', { slug: cat.slug })
             }
           >
             <Text style={d.itemLabel}>{cat.label}</Text>
@@ -71,12 +71,12 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
         <View style={d.divider} />
         <Text style={d.sectionLabel}>MI CUENTA</Text>
 
-        <TouchableOpacity style={d.item} onPress={() => go('/(student)/favorites')}>
+        <TouchableOpacity style={d.item} onPress={() => go('/favorites')}>
           <Text style={d.itemLabel}>Mis Favoritos</Text>
           {favCount > 0 && <View style={d.badge}><Text style={d.badgeText}>{favCount}</Text></View>}
         </TouchableOpacity>
 
-        <TouchableOpacity style={d.item} onPress={() => go('/(student)/cart')}>
+        <TouchableOpacity style={d.item} onPress={() => go('/cart')}>
           <Text style={d.itemLabel}>Mi Carrito</Text>
           {cartCount > 0 && (
             <View style={[d.badge, { backgroundColor: C.mid }]}>
@@ -85,7 +85,7 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={d.item} onPress={() => go('/(student)/orders')}>
+        <TouchableOpacity style={d.item} onPress={() => go('/orders')}>
           <Text style={d.itemLabel}>Mis Pedidos</Text>
           <Text style={d.chevron}>›</Text>
         </TouchableOpacity>

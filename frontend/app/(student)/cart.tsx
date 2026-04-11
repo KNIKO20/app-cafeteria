@@ -38,7 +38,7 @@ export default function CartScreen() {
 
       // Navegación a pago con orderId y total
       router.push({
-        pathname: '/(student)/payment',
+        pathname: '/payment',
         params: {
           orderId: result.order_id,
           total: String(result.total),
@@ -58,7 +58,7 @@ export default function CartScreen() {
         <Text style={styles.emptyEmoji}>🛒</Text>
         <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
         <Text style={styles.emptySubtitle}>Añade productos desde el menú</Text>
-        <TouchableOpacity style={styles.goMenuBtn} onPress={() => router.push('/(student)/index')}>
+        <TouchableOpacity style={styles.goMenuBtn} onPress={() => router.push('/')}>
           <Text style={styles.goMenuText}>Ver menú</Text>
         </TouchableOpacity>
       </View>
