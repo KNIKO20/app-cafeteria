@@ -6,10 +6,9 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = 'config.urls'
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 ADMIN_EMAILS = config('ADMIN_EMAILS', default='').split(',')
 
 INSTALLED_APPS = [
@@ -43,6 +42,7 @@ TEMPLATES = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware', 
     'corsheaders.middleware.CorsMiddleware',               
     'django.middleware.common.CommonMiddleware',
@@ -70,11 +70,14 @@ REST_FRAMEWORK = {
 }
 
 # ── CORS (para el frontend React) ─────────────────────
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8081",   # Expo web
-    "http://localhost:3000",   # React web
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8081",   # Expo web
+#     "http://localhost:3000",   # React web
+# ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 # ── Variables de entorno ───────────────────────────────
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
