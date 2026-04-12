@@ -15,7 +15,7 @@ class GetMenuUseCase:
         if category:
             try:
                 cat_enum = ProductCategory(category)
-                return self.product_repo.find_by_category(cat_enum)
+                return self.product_repo.find_by_category(cat_enum.value)
             except ValueError:
                 raise ValueError(f"Categoría '{category}' no válida")
         

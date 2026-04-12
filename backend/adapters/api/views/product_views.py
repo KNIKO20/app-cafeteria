@@ -10,8 +10,10 @@ class ProductListView(APIView):
 
     def get(self, request):
         try:
+            category_param = request.query_params.get("category")
+            
             repo = get_menu_use_case()
-            products = repo.execute(request.data.get("category"))
+            products = repo.execute(category_param)
             return Response([{
                 "id": p.id,
                 "name": p.name,
