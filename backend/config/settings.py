@@ -1,5 +1,6 @@
 # settings.py — Configuración principal de Django
 
+import logging
 import os
 from decouple import config
 from pathlib import Path
@@ -54,11 +55,21 @@ MIDDLEWARE = [
 
 # ── MongoDB ────────────────────────────────────────────
 import mongoengine
-mongoengine.connect(
-    db=config('MONGO_DB', default='cafeteria_db'),
-    host=config('MONGO_HOST', default='localhost'),
-    port=config('MONGO_PORT', default=27017, cast=int),
-)
+# mongoengine.connect(
+#     db=config('MONGO_DB', default='cafeteria_db'),
+#     host=config('MONGO_HOST', default='localhost'),
+#     port=config('MONGO_PORT', default=27017, cast=int),
+# )
+logger = logging.getLogger(__name__)
+try:
+    mongoengine.connect(
+        host=config('MONGO_HOST'),
+        alias='default',
+        serverSelectionTimeoutMS=5000 
+    )
+    print("MongoDB conectado exitosamente")
+except Exception as e:
+    print(f"Error conectando a MongoDB: {e}")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
