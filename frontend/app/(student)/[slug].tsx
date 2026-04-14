@@ -1,5 +1,5 @@
-// app/(student)/category/[slug].tsx
-// Pantalla dinámica de categoría. Corregida para coincidir con la ruta del Drawer.
+// app/(student)/[slug].tsx
+// Pantalla dinámica de categoría.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -7,9 +7,10 @@ import {
   StyleSheet, TextInput, Image, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { getMenu } from '../../../services/api';
-import { useCartStore } from '../../../stores/cartStore';
-import { useFavoritesStore } from '../../../stores/favoritesStore';
+import { getMenu } from '../../services/api';
+import { useCartStore } from '../../stores/cartStore';
+import { useFavoritesStore } from '../../stores/favoritesStore';
+import { resolveImage, getProductImage } from '../../utils/imageHelper';
 
 const C = {
   dark:  '#1E3932',
@@ -22,9 +23,13 @@ const C = {
 
 const CATEGORY_META: Record<string, { title: string; description: string }> = {
   bocadillo: { title: 'Bocadillos',  description: 'Pan recién hecho y rellenos del día' },
+  bocadillos: { title: 'Bocadillos', description: 'Pan recién hecho y rellenos del día' },
   bebida:    { title: 'Bebidas',     description: 'Calientes, frías y zumos naturales'  },
+  bebidas:   { title: 'Bebidas',     description: 'Calientes, frías y zumos naturales'  },
   postre:    { title: 'Postres',     description: 'Dulces y repostería artesanal'        },
+  postres:   { title: 'Postres',     description: 'Dulces y repostería artesanal'        },
   saludable: { title: 'Saludable',  description: 'Ensaladas, frutas y opciones light'   },
+  saludables: { title: 'Saludable',  description: 'Ensaladas, frutas y opciones light'   },
 };
 
 interface Product {
@@ -46,10 +51,7 @@ function ProductCard({
       </TouchableOpacity>
 
       <View style={pc.imgWrap}>
-        {product.image_url
-          ? <Image source={{ uri: product.image_url }} style={pc.img} resizeMode="cover" />
-          : <View style={pc.imgFallback}><Text style={pc.imgLetter}>{product.name[0].toUpperCase()}</Text></View>
-        }
+        <SlugImage product={product} />
       </View>
 
       <Text style={pc.name} numberOfLines={2}>{product.name}</Text>
@@ -89,10 +91,27 @@ const pc = StyleSheet.create({
   addText:    { color: C.white, fontSize: 12, fontWeight: '700' },
 });
 
+// ── Imagen con fallback automático ───────────────────────────────────
+function SlugImage({ product }: { product: Product }) {
+  const initial  = resolveImage(product.name, product.category, product.image_url);
+  const fallback = getProductImage(product.name, product.category);
+  const [uri, setUri] = useState(initial);
+  return (
+    <Image
+      source={{ uri }}
+      style={pc.img}
+      resizeMode="cover"
+      onError={() => { if (uri !== fallback) setUri(fallback); }}
+    />
+  );
+}
+
 // ── Pantalla de categoría ────────────────────────────────────────────
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const meta = CATEGORY_META[slug] ?? { title: slug, description: '' };
+  // Si slug es undefined o vacío, mostramos "Todo el menú"
+  const safeSlug = slug || "";
+  const meta = CATEGORY_META[safeSlug.toLowerCase()] ?? { title: 'Todo el Menú', description: 'Todos nuestros productos disponibles' };
 
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
@@ -103,11 +122,14 @@ export default function CategoryScreen() {
 
   useEffect(() => {
     setLoading(true);
-    getMenu(slug)
+    // Limpiamos productos anteriores para evitar "parpadeos" de categorías previas
+    setProducts([]);
+    
+    getMenu(safeSlug)
       .then(data => setProducts(data.filter((p: Product) => p.is_available)))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [safeSlug]);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())

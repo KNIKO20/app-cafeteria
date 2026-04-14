@@ -1,3 +1,5 @@
+import traceback
+from datetime import datetime
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -29,7 +31,10 @@ class GoogleLoginView(APIView):
         except UserInactiveError as e:
             return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
-            print(e)
+            error_details = traceback.format_exc()
+            print(f"DEBUG ERROR: {error_details}")
+            with open("debug_auth_error.log", "a") as f:
+                f.write(f"\n[{datetime.now()}] ERROR IN GOOGLE LOGIN:\n{error_details}\n")
             return Response({"error": "Error interno al iniciar sesión."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

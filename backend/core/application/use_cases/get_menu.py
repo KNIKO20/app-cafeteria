@@ -10,13 +10,15 @@ class GetMenuUseCase:
     def execute(self, category: Optional[str] = None) -> List[Product]:
         """
         Devuelve los productos disponibles.
-        Si se pasa categoría, filtra por ella.
+        Si se pasa categoría válida, filtra por ella. Si no, devuelve todo.
         """
-        if category:
+        if category and category.strip():
             try:
-                cat_enum = ProductCategory(category)
+                # Intentamos convertir a Enum. Si falla, devolvemos todo el menú.
+                cat_enum = ProductCategory(category.lower())
                 return self.product_repo.find_by_category(cat_enum)
             except ValueError:
-                raise ValueError(f"Categoría '{category}' no válida")
+                # Si la categoría no existe, mejor devolvemos todo en lugar de error.
+                return self.product_repo.find_all_available()
         
         return self.product_repo.find_all_available()

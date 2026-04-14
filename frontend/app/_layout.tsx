@@ -1,28 +1,89 @@
-import { useRouter, useSegments } from 'expo-router';
+// Layout principal — drawer premium con animaciones y mejor navegación
+import { useRouter, useSegments, usePathname } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Pressable } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCartStore } from '../stores/cartStore';
 
 export const C = {
-  dark:   '#1E3932',
-  mid:    '#00754A',
+  dark:   '#1A3329',
+  mid:    '#00704A',
+  accent: '#CBA258',
   light:  '#D4E9E2',
   white:  '#FFFFFF',
-  bg:     '#F2F0EB',
-  muted:  '#6B8E7F',
-  border: 'rgba(255,255,255,0.10)',
+  bg:     '#F7F4EF',
+  muted:  '#8BA99A',
+  subtle: '#E8F0EC',
+  border: 'rgba(255,255,255,0.08)',
 };
 
-// ── Menú lateral del alumno ──────────────────────────────────────────
+// ── Ítem de menú animado ─────────────────────────────────────────────
+function NavItem({
+  label, onPress, badge, badgeColor, chevron = true, index,
+}: {
+  label: string; onPress: () => void;
+  badge?: number; badgeColor?: string;
+  chevron?: boolean; index: number;
+}) {
+  const enterAnim = useRef(new Animated.Value(0)).current;
+  const pressAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(enterAnim, {
+      toValue: 1, useNativeDriver: true,
+      tension: 50, friction: 12, delay: index * 45,
+    }).start();
+  }, []);
+
+  const handlePressIn = () =>
+    Animated.spring(pressAnim, { toValue: 0.97, useNativeDriver: true, tension: 200, friction: 10 }).start();
+  const handlePressOut = () =>
+    Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start(onPress);
+
+  return (
+    <Animated.View style={{
+      opacity: enterAnim,
+      transform: [
+        { translateX: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) },
+        { scale: pressAnim },
+      ],
+    }}>
+      <Pressable
+        style={d.item}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Text style={d.itemLabel}>{label}</Text>
+        <View style={d.itemRight}>
+          {badge != null && badge > 0 && (
+            <View style={[d.badge, badgeColor ? { backgroundColor: badgeColor } : {}]}>
+              <Text style={d.badgeText}>{badge}</Text>
+            </View>
+          )}
+          {chevron && <Text style={d.chevron}>›</Text>}
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ── Contenido del drawer ─────────────────────────────────────────────
 function StudentDrawerContent({ navigation }: { navigation: any }) {
   const logout    = useAuthStore((s) => s.logout);
   const user      = useAuthStore((s) => s.user);
   const router    = useRouter();
   const favCount  = useFavoritesStore((s) => s.favorites.length);
   const cartCount = useCartStore((s) => s.itemCount());
+
+  const headerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(headerAnim, {
+      toValue: 1, useNativeDriver: true, tension: 50, friction: 12,
+    }).start();
+  }, []);
 
   const CATEGORIES = [
     { slug: '',          label: 'Todo el menú' },
@@ -38,69 +99,75 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
     navigation.closeDrawer();
   };
 
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)/login');
+  };
+
   return (
     <View style={d.root}>
       {/* Cabecera */}
-      <View style={d.header}>
-        <View style={d.logoCircle}>
-          <Text style={d.logoLetters}>AC</Text>
+      <Animated.View style={[d.header, {
+        opacity: headerAnim,
+        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }],
+      }]}>
+        <View style={d.logoRow}>
+          <View style={d.logoCircle}>
+            <Text style={d.logoLetters}>AC</Text>
+          </View>
+          <View style={d.logoTexts}>
+            <Text style={d.appName}>API Cafetería</Text>
+            <Text style={d.appSub}>App del alumno</Text>
+          </View>
         </View>
-        <Text style={d.appName}>API Cafetería</Text>
-        <Text style={d.userName}>{user?.name ?? 'Alumno'}</Text>
-      </View>
+        <View style={d.userChip}>
+          <View style={d.userDot} />
+          <Text style={d.userName}>{user?.name ?? 'Alumno'}</Text>
+        </View>
+      </Animated.View>
 
-      {/* Todo el contenido en ScrollView → logout nunca se solapa */}
       <ScrollView style={d.scroll} showsVerticalScrollIndicator={false}>
 
+        {/* Menú */}
         <Text style={d.sectionLabel}>MENÚ</Text>
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.slug}
-            style={d.item}
-            onPress={() =>
-              cat.slug === ''
-                ? go('/')
-                : go('/category/[slug]', { slug: cat.slug })
+        {CATEGORIES.map((cat, i) => (
+          <NavItem
+            key={cat.slug} label={cat.label} index={i}
+            onPress={() => cat.slug === ''
+              ? go('/(student)/index')
+              : go('/(student)/[slug]', { slug: cat.slug })
             }
-          >
-            <Text style={d.itemLabel}>{cat.label}</Text>
-            <Text style={d.chevron}>›</Text>
-          </TouchableOpacity>
+          />
         ))}
 
         <View style={d.divider} />
         <Text style={d.sectionLabel}>MI CUENTA</Text>
 
-        <TouchableOpacity style={d.item} onPress={() => go('/favorites')}>
-          <Text style={d.itemLabel}>Mis Favoritos</Text>
-          {favCount > 0 && <View style={d.badge}><Text style={d.badgeText}>{favCount}</Text></View>}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={d.item} onPress={() => go('/cart')}>
-          <Text style={d.itemLabel}>Mi Carrito</Text>
-          {cartCount > 0 && (
-            <View style={[d.badge, { backgroundColor: C.mid }]}>
-              <Text style={d.badgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={d.item} onPress={() => go('/orders')}>
-          <Text style={d.itemLabel}>Mis Pedidos</Text>
-          <Text style={d.chevron}>›</Text>
-        </TouchableOpacity>
+        <NavItem
+          label="Mis Favoritos" index={5}
+          badge={favCount} badgeColor="#DC2626"
+          onPress={() => go('/(student)/favorites')}
+        />
+        <NavItem
+          label="Mi Carrito" index={6}
+          badge={cartCount} badgeColor={C.mid}
+          onPress={() => go('/(student)/cart')}
+        />
+        <NavItem
+          label="Mis Pedidos" index={7}
+          onPress={() => go('/(student)/orders')}
+        />
 
         <View style={d.divider} />
 
-        {/* Cerrar sesión dentro del scroll → nunca se solapa */}
-        <TouchableOpacity
-          style={d.logoutBtn}
-          onPress={() => { logout(); router.replace('/(auth)/login'); }}
-        >
+        {/* Cerrar sesión */}
+        <Pressable style={d.logoutBtn} onPress={handleLogout}>
           <Text style={d.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <View style={{ height: 48 }} />
+        {/* Versión */}
+        <Text style={d.version}>v1.0.0 · API Cafetería</Text>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -109,35 +176,58 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
 const d = StyleSheet.create({
   root:        { flex: 1, backgroundColor: C.dark },
   header:      {
-    paddingTop: 56, paddingBottom: 28, paddingHorizontal: 24,
+    paddingTop: 52, paddingBottom: 24, paddingHorizontal: 22,
     backgroundColor: C.mid,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
+  logoRow:     { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
   logoCircle:  {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
   },
-  logoLetters: { fontSize: 16, fontWeight: '900', color: C.mid, letterSpacing: 1 },
-  appName:     { fontSize: 19, fontWeight: '800', color: C.white },
-  userName:    { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
-  scroll:      { flex: 1 },
-  sectionLabel:{ fontSize: 10, fontWeight: '800', color: C.muted, letterSpacing: 2,
-                 paddingHorizontal: 24, paddingTop: 22, paddingBottom: 6 },
-  item:        { flexDirection: 'row', alignItems: 'center',
-                 paddingHorizontal: 24, paddingVertical: 15 },
+  logoLetters: { fontSize: 15, fontWeight: '900', color: C.white, letterSpacing: 1 },
+  logoTexts:   { flex: 1 },
+  appName:     { fontSize: 17, fontWeight: '900', color: C.white, letterSpacing: -0.2 },
+  appSub:      { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+  userChip:    {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start',
+  },
+  userDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: C.accent },
+  userName:    { fontSize: 13, fontWeight: '700', color: C.white },
+
+  scroll:      { flex: 1, paddingTop: 8 },
+  sectionLabel:{ fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2.5,
+                 paddingHorizontal: 22, paddingTop: 20, paddingBottom: 4 },
+  item:        {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 22, paddingVertical: 14,
+    marginHorizontal: 10, borderRadius: 12,
+  },
   itemLabel:   { fontSize: 15, fontWeight: '600', color: C.white, flex: 1 },
-  chevron:     { fontSize: 18, color: C.muted },
+  itemRight:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chevron:     { fontSize: 20, color: 'rgba(255,255,255,0.25)' },
   badge:       {
-    minWidth: 22, height: 22, borderRadius: 11, backgroundColor: '#c0392b',
+    minWidth: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#DC2626',
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
   },
-  badgeText:   { color: C.white, fontSize: 11, fontWeight: '800' },
-  divider:     { height: 1, backgroundColor: C.border, marginHorizontal: 24, marginVertical: 6 },
+  badgeText:   { color: C.white, fontSize: 11, fontWeight: '900' },
+  divider:     {
+    height: 1, backgroundColor: C.border,
+    marginHorizontal: 22, marginVertical: 8,
+  },
   logoutBtn:   {
-    marginHorizontal: 24, marginTop: 10,
-    paddingVertical: 13, borderRadius: 10,
-    borderWidth: 1, borderColor: C.muted, alignItems: 'center',
+    marginHorizontal: 22, marginTop: 6,
+    paddingVertical: 13, borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)',
   },
   logoutText:  { color: C.muted, fontWeight: '700', fontSize: 14 },
+  version:     { fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 16, letterSpacing: 0.5 },
 });
 
 // ── Layout principal ─────────────────────────────────────────────────
@@ -153,7 +243,8 @@ export default function Layout() {
   useEffect(() => {
     if (!isReady) return;
     const inAuth = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuth) setTimeout(() => router.replace('/(auth)/login'), 1);
+    if (!isAuthenticated && !inAuth)
+      setTimeout(() => router.replace('/(auth)/login'), 1);
     else if (isAuthenticated && inAuth)
       setTimeout(() => router.replace(user?.is_admin ? '/(admin)/dashboard' : '/(student)'), 1);
   }, [isAuthenticated, segments, isReady]);
@@ -161,18 +252,23 @@ export default function Layout() {
   const headerOpts = {
     headerStyle:      { backgroundColor: C.dark },
     headerTintColor:  C.white,
-    headerTitleStyle: { fontWeight: '700' as const },
+    headerTitleStyle: { fontWeight: '800' as const, letterSpacing: -0.2 },
     headerBackTitle:  'Volver',
+    headerShadowVisible: false,
   };
 
   if (!user?.is_admin) {
     return (
       <Drawer
         drawerContent={(props) => <StudentDrawerContent {...props} />}
-        screenOptions={{ ...headerOpts, drawerStyle: { width: 290 } }}
+        screenOptions={{
+          ...headerOpts,
+          drawerStyle: { width: 294 },
+          swipeEdgeWidth: 50,
+        }}
       >
         <Drawer.Screen name="(student)/index"           options={{ title: 'API Cafetería' }} />
-        <Drawer.Screen name="(student)/category/[slug]" options={{ title: 'Categoría' }} />
+        <Drawer.Screen name="(student)/[slug]" options={{ title: 'Categoría' }} />
         <Drawer.Screen name="(student)/favorites"       options={{ title: 'Mis Favoritos' }} />
         <Drawer.Screen name="(student)/cart"            options={{ title: 'Mi Carrito' }} />
         <Drawer.Screen name="(student)/orders"          options={{ title: 'Mis Pedidos' }} />

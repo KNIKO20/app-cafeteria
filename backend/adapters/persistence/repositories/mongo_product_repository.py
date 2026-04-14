@@ -21,7 +21,8 @@ class MongoProductRepository(ProductRepository):
         return self._to_entity(doc) if doc else None
 
     def find_by_category(self, category) -> List[Product]:
-        docs = ProductDocument.objects(category=category)
+        val = category.value if hasattr(category, 'value') else category
+        docs = ProductDocument.objects(category=val, is_deleted=False, is_available=True)
         return [self._to_entity(doc) for doc in docs]
 
     def save(self, product: Product) -> Product:
