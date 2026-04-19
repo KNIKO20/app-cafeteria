@@ -6,7 +6,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Pressab
 import { useAuthStore } from '../stores/authStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCartStore } from '../stores/cartStore';
-
+import { Ionicons } from '@expo/vector-icons'; 
 export const C = {
   dark:   '#1A3329',
   mid:    '#00704A',
@@ -18,6 +18,51 @@ export const C = {
   subtle: '#E8F0EC',
   border: 'rgba(255,255,255,0.08)',
 };
+
+function NavGroup({ 
+  label, icon, children, isOpen, onToggle, index 
+}: { 
+  label: string; icon: string; children: React.ReactNode; 
+  isOpen: boolean; onToggle: () => void; index: number 
+}) {
+  const animatedHeight = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedHeight, {
+      toValue: isOpen ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false, // Height no soporta native driver
+    }).start();
+  }, [isOpen]);
+
+  return (
+    <View style={d.groupContainer}>
+      <TouchableOpacity 
+        style={[d.item, isOpen && d.itemActive]} 
+        onPress={onToggle} 
+        activeOpacity={0.7}
+      >
+        <Ionicons name={icon as any} size={20} color={isOpen ? C.accent : C.muted} />
+        <Text style={[d.itemLabel, { marginLeft: 12 }, isOpen && { color: C.accent }]}>{label}</Text>
+        <Ionicons 
+          name={isOpen ? "chevron-up" : "chevron-down"} 
+          size={16} 
+          color={C.muted} 
+        />
+      </TouchableOpacity>
+      
+      {isOpen && (
+        <Animated.View style={{
+          paddingLeft: 20,
+          overflow: 'hidden',
+          opacity: animatedHeight,
+        }}>
+          {children}
+        </Animated.View>
+      )}
+    </View>
+  );
+}
 
 // ── Ítem de menú animado ─────────────────────────────────────────────
 function NavItem({
@@ -76,7 +121,7 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
   const router    = useRouter();
   const favCount  = useFavoritesStore((s) => s.favorites.length);
   const cartCount = useCartStore((s) => s.itemCount());
-
+  const [openGroup, setOpenGroup] = useState<string | null>('comida');
   const headerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -85,20 +130,35 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
     }).start();
   }, []);
 
-  const CATEGORIES = [
-    { slug: '',          label: 'Todo el menú' },
-    { slug: 'bocadillo', label: 'Bocadillos'   },
-    { slug: 'bebida',    label: 'Bebidas'      },
-    { slug: 'postre',    label: 'Postres'      },
-    { slug: 'saludable', label: 'Saludable'    },
-  ];
-
-  const go = (pathname: string, params?: Record<string, string>) => {
-    if (params) router.push({ pathname: pathname as any, params });
-    else router.push(pathname as any);
-    navigation.closeDrawer();
+  const MENU_GROUPS = {
+    comida: [
+      { slug: 'bocadillo_caliente', label: 'Bocadillos Calientes' },
+      { slug: 'bocadillo_frio',    label: 'Bocadillos Fríos' },
+      { slug: 'sandwich',           label: 'Sándwiches' },
+      { slug: 'bolleria',           label: 'Bollería' },
+    ],
+    bebida: [
+      { slug: 'bebida',    label: 'Refrescos y Agua' },
+      { slug: 'cafeteria', label: 'Café e Infusiones' },
+    ],
+    especiales: [
+      { slug: 'menu',      label: 'Menú del Día' },
+      { slug: 'snack',     label: 'Snacks y Tapas' },
+    ]
   };
+  const go = (slug: string) => {
+      router.push({ pathname: '/(student)/[slug]', params: { slug } });
+      navigation.closeDrawer();
+    };
+  const goUser = (pathname: string, params?: Record<string, string>) => {
 
+    if (params) router.push({ pathname: pathname as any, params });
+
+    else router.push(pathname as any);
+
+    navigation.closeDrawer();
+
+  };
   const handleLogout = () => {
     logout();
     router.replace('/(auth)/login');
@@ -126,40 +186,61 @@ function StudentDrawerContent({ navigation }: { navigation: any }) {
         </View>
       </Animated.View>
 
-      <ScrollView style={d.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Menú */}
-        <Text style={d.sectionLabel}>MENÚ</Text>
-        {CATEGORIES.map((cat, i) => (
-          <NavItem
-            key={cat.slug} label={cat.label} index={i}
-            onPress={() => cat.slug === ''
-              ? go('/(student)/index')
-              : go('/(student)/[slug]', { slug: cat.slug })
-            }
+      <ScrollView style={d.scroll} showsVerticalScrollIndicator={false}>
+          <Text style={d.sectionLabel}>CARTA DIGITAL</Text>
+          
+          <NavItem 
+            label="Ver todo el menú" 
+            index={0} 
+            onPress={() => { router.push('/(student)'); navigation.closeDrawer(); }} 
           />
-        ))}
 
-        <View style={d.divider} />
+          {/* Grupo: Comida */}
+          <NavGroup 
+            label="Comidas" 
+            icon="fast-food-outline" 
+            index={1}
+            isOpen={openGroup === 'comida'} 
+            onToggle={() => setOpenGroup(openGroup === 'comida' ? null : 'comida')}
+          >
+            {MENU_GROUPS.comida.map((cat, i) => (
+              <NavItem key={cat.slug} label={cat.label} index={i} chevron={false} onPress={() => go(cat.slug)} />
+            ))}
+          </NavGroup>
+
+          {/* Grupo: Bebidas */}
+          <NavGroup 
+            label="Bebidas" 
+            icon="cafe-outline" 
+            index={2}
+            isOpen={openGroup === 'bebida'} 
+            onToggle={() => setOpenGroup(openGroup === 'bebida' ? null : 'bebida')}
+          >
+            {MENU_GROUPS.bebida.map((cat, i) => (
+              <NavItem key={cat.slug} label={cat.label} index={i} chevron={false} onPress={() => go(cat.slug)} />
+            ))}
+        </NavGroup>
+                <View style={d.divider} />
         <Text style={d.sectionLabel}>MI CUENTA</Text>
 
         <NavItem
           label="Mis Favoritos" index={5}
           badge={favCount} badgeColor="#DC2626"
-          onPress={() => go('/(student)/favorites')}
+          onPress={() => goUser('/(student)/favorites')}
         />
         <NavItem
           label="Mi Carrito" index={6}
           badge={cartCount} badgeColor={C.mid}
-          onPress={() => go('/(student)/cart')}
+          onPress={() => goUser('/(student)/cart')}
         />
         <NavItem
           label="Mis Pedidos" index={7}
-          onPress={() => go('/(student)/orders')}
+          onPress={() => goUser('/(student)/orders')}
         />
 
         <View style={d.divider} />
-
         {/* Cerrar sesión */}
         <Pressable style={d.logoutBtn} onPress={handleLogout}>
           <Text style={d.logoutText}>Cerrar sesión</Text>
@@ -225,6 +306,19 @@ const d = StyleSheet.create({
     paddingVertical: 13, borderRadius: 12,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  groupContainer: {
+    marginBottom: 4,
+  },
+  itemActive: {
+    backgroundColor: 'rgba(203, 162, 88, 0.08)', // Color accent con transparencia
+    borderLeftWidth: 3,
+    borderLeftColor: C.accent,
+  },
+  // Ajuste opcional para NavItem dentro de grupos
+  subItem: {
+    paddingVertical: 10,
+    paddingLeft: 40,
   },
   logoutText:  { color: C.muted, fontWeight: '700', fontSize: 14 },
   version:     { fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 16, letterSpacing: 0.5 },

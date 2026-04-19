@@ -15,6 +15,7 @@ google-auth==2.26.2
 gunicorn==25.3.0
 idna==3.11
 iniconfig==2.3.0
+jwt==1.4.0
 mongoengine==0.29.3
 packaging==26.0
 pluggy==1.6.0

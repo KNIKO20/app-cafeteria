@@ -1,6 +1,16 @@
+// components/ProductCard.tsx — Tarjeta de producto del catálogo rediseñada
+// Iconos sugeridos (Ionicons de @expo/vector-icons):
+//   Añadir:    "add"          (18px blanco, dentro del círculo verde)
+//   Favorito:  "heart"        (relleno) / "heart-outline" (vacío)
+//   Agotado:   "close-circle" (16px, rojo)
+
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View, Text, Image, TouchableOpacity,
+  StyleSheet, Animated,
+} from 'react-native';
 import { resolveImage, getProductImage } from '../utils/imageHelper';
+import { C, radius, shadow } from '../theme';
 
 interface Props {
   product: {
@@ -13,46 +23,178 @@ interface Props {
     is_available: boolean;
   };
   onAddToCart: () => void;
+  onFavorite?: () => void;
+  isFavorite?: boolean;
 }
 
-export default function ProductCard({ product, onAddToCart }: Props) {
-  const initialUri = resolveImage(product.name, product.category, product.image_url);
+export default function ProductCard({
+  product, onAddToCart, onFavorite, isFavorite,
+}: Props) {
+  const initialUri  = resolveImage(product.name, product.category, product.image_url);
   const fallbackUri = getProductImage(product.name, product.category);
   const [imgUri, setImgUri] = useState(initialUri);
 
-  return (
-    <View style={[styles.card, !product.is_available && styles.cardDisabled]}>
-      <Image
-        source={{ uri: imgUri }}
-        style={styles.image}
-        resizeMode="cover"
-        onError={() => {
-          if (imgUri !== fallbackUri) setImgUri(fallbackUri);
-        }}
-      />
-      <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-      <Text style={styles.price}>{product.price.toFixed(2)}€</Text>
+  // Micro-animación al pulsar
+  const pressAnim = React.useRef(new Animated.Value(1)).current;
+  const pressIn   = () => Animated.spring(pressAnim, { toValue: 0.95, useNativeDriver: true, tension: 300, friction: 10 }).start();
+  const pressOut  = () => Animated.spring(pressAnim, { toValue: 1,    useNativeDriver: true, tension: 300, friction: 10 }).start();
 
+  return (
+    <Animated.View
+      style={[
+        s.wrap,
+        !product.is_available && s.wrapDisabled,
+        { transform: [{ scale: pressAnim }] },
+      ]}
+    >
       <TouchableOpacity
-        style={[styles.addBtn, !product.is_available && styles.addBtnDisabled]}
+        style={s.card}
         onPress={onAddToCart}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
         disabled={!product.is_available}
+        activeOpacity={1}
       >
-        <Text style={styles.addBtnText}>
-          {product.is_available ? '+ Añadir' : 'No disponible'}
-        </Text>
+        {/* ── Zona de imagen ─────────────────────────────────── */}
+        <View style={s.imageWrap}>
+          <Image
+            source={{ uri: imgUri }}
+            style={s.image}
+            resizeMode="cover"
+            onError={() => { if (imgUri !== fallbackUri) setImgUri(fallbackUri); }}
+          />
+
+          {/* Badge de categoría */}
+          {product.category && (
+            <View style={s.catBadge}>
+              <Text style={s.catText} numberOfLines={1}>
+                {product.category.replace(/_/g, ' ')}
+              </Text>
+            </View>
+          )}
+
+          {/* Botón de favorito — Ionicons "heart" / "heart-outline" */}
+          {onFavorite && (
+            <TouchableOpacity style={s.favBtn} onPress={onFavorite} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <View style={[s.heart, isFavorite && s.heartFilled]} />
+            </TouchableOpacity>
+          )}
+
+          {/* Overlay si no disponible */}
+          {!product.is_available && (
+            <View style={s.unavailableOverlay}>
+              <Text style={s.unavailableText}>Sin stock</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Info ──────────────────────────────────────────── */}
+        <View style={s.info}>
+          <Text style={s.name} numberOfLines={2}>{product.name}</Text>
+
+          <View style={s.bottom}>
+            <Text style={s.price}>{product.price.toFixed(2)} €</Text>
+
+            {/* Botón "+" circular */}
+            <View style={[s.addCircle, !product.is_available && s.addCircleDisabled]}>
+              {/* Ionicons "add" 16px / "close" si no disponible */}
+              <Text style={s.addText}>{product.is_available ? '+' : '×'}</Text>
+            </View>
+          </View>
+        </View>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  card:           { flex: 1, margin: 6, backgroundColor: '#fff', borderRadius: 12, padding: 12, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 6, elevation: 3 },
-  cardDisabled:   { opacity: 0.5 },
-  image:          { width: '100%', height: 100, borderRadius: 8, marginBottom: 8, backgroundColor: '#f0f0f0' },
-  name:           { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 4, minHeight: 36 },
-  price:          { fontSize: 16, fontWeight: '800', color: '#FF6B35', marginBottom: 8 },
-  addBtn:         { backgroundColor: '#FF6B35', borderRadius: 8, padding: 8, alignItems: 'center' },
-  addBtnDisabled: { backgroundColor: '#ccc' },
-  addBtnText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
+const s = StyleSheet.create({
+  wrap:         { flex: 1, margin: 5 },
+  wrapDisabled: { opacity: 0.45 },
+
+  card: {
+    backgroundColor: C.white,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    ...shadow.card,
+  },
+
+  // Imagen
+  imageWrap: { position: 'relative' },
+  image: {
+    width: '100%', height: 105,
+    backgroundColor: C.subtle,
+  },
+
+  // Badge de categoría — esquina inferior izquierda
+  catBadge: {
+    position: 'absolute', bottom: 6, left: 7,
+    backgroundColor: 'rgba(26,51,41,0.78)',
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: 7,
+  },
+  catText: {
+    fontSize: 9, fontWeight: '800',
+    color: C.white, textTransform: 'capitalize',
+  },
+
+  // Botón favorito — esquina superior derecha
+  favBtn: {
+    position: 'absolute', top: 7, right: 7,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center', justifyContent: 'center',
+    ...shadow.card,
+  },
+  // Icono corazón simple hecho con View (usar Ionicons "heart" para mejor resultado)
+  heart: {
+    width: 13, height: 11,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: C.muted,
+  },
+  heartFilled: {
+    backgroundColor: '#e74c3c',
+    borderColor: '#e74c3c',
+  },
+
+  // Overlay agotado
+  unavailableOverlay: {
+    position: 'absolute', inset: 0,
+    backgroundColor: 'rgba(26,51,41,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  } as any,
+  unavailableText: {
+    fontSize: 12, fontWeight: '900',
+    color: C.white, letterSpacing: 0.5,
+  },
+
+  // Información
+  info: { padding: 10 },
+  name: {
+    fontSize: 13, fontWeight: '700',
+    color: C.dark, lineHeight: 18,
+    minHeight: 36, marginBottom: 8,
+  },
+  bottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  price: {
+    fontSize: 16, fontWeight: '900',
+    color: C.dark, letterSpacing: -0.3,
+  },
+
+  // Botón "+" circular
+  addCircle: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: C.dark,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addCircleDisabled: { backgroundColor: C.muted },
+  addText: {
+    fontSize: 20, fontWeight: '300',
+    color: C.white, lineHeight: 24,
+    marginTop: -2,
+  },
 });

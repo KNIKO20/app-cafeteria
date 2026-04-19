@@ -1,22 +1,60 @@
-// [NEW] Pantalla de administración de franjas horarias y estado del servicio.
+// (admin)/settings.tsx — Gestión de franjas horarias rediseñada
+// Iconos sugeridos (Ionicons):
+//   Franja activa:   "checkmark-circle-outline"
+//   Franja inactiva: "close-circle-outline"
+//   Editar:          "pencil-outline"
+//   Reloj:           "time-outline"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, TextInput, Alert, Modal, ScrollView,
+  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  TextInput, Alert, Modal, Animated, Pressable,
 } from 'react-native';
 import { getSlots, updateSlot } from '../../services/api';
-
+import { C, radius, shadow } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
 interface TimeSlot {
   id: string;
-  start_time: string;   // "10:30"
-  end_time: string;     // "11:00"
+  start_time: string;
+  end_time: string;
   max_orders: number;
   current_orders?: number;
   is_active: boolean;
 }
 
-// ── Modal para editar franja ─────────────────────────────────────────
+// ── Barra de ocupación ───────────────────────────────────────────────
+function OccupancyBar({ current = 0, max }: { current?: number; max: number }) {
+  const pct   = Math.min((current / max) * 100, 100);
+  const color = pct > 80 ? C.danger : pct > 50 ? C.warning : C.mid;
+
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(widthAnim, { toValue: pct, duration: 600, useNativeDriver: false }).start();
+  }, [pct]);
+
+  return (
+    <View style={ob.wrap}>
+      <View style={ob.track}>
+        <Animated.View
+          style={[ob.fill, {
+            backgroundColor: color,
+            width: widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
+          }]}
+        />
+      </View>
+      <Text style={[ob.label, { color }]}>{current}/{max}</Text>
+    </View>
+  );
+}
+
+const ob = StyleSheet.create({
+  wrap:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
+  track: { flex: 1, height: 5, backgroundColor: C.subtle, borderRadius: 3, overflow: 'hidden' },
+  fill:  { height: '100%', borderRadius: 3 },
+  label: { fontSize: 12, fontWeight: '800', minWidth: 40, textAlign: 'right' },
+});
+
+// ── Modal de edición ─────────────────────────────────────────────────
 interface EditModalProps {
   slot: TimeSlot | null;
   visible: boolean;
@@ -26,112 +64,234 @@ interface EditModalProps {
 
 function EditSlotModal({ slot, visible, onClose, onSave }: EditModalProps) {
   const [maxOrders, setMaxOrders] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [isActive, setIsActive]   = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const slideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
-    if (slot) {
-      setMaxOrders(String(slot.max_orders));
-      setIsActive(slot.is_active);
-    }
+    if (slot) { setMaxOrders(String(slot.max_orders)); setIsActive(slot.is_active); }
   }, [slot]);
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: visible ? 0 : 300,
+      useNativeDriver: true, tension: 70, friction: 14,
+    }).start();
+  }, [visible]);
 
   const handleSave = async () => {
     const max = parseInt(maxOrders, 10);
-    if (isNaN(max) || max < 1) {
-      Alert.alert('Error', 'El límite debe ser un número mayor que 0.');
-      return;
-    }
+    if (isNaN(max) || max < 1) { Alert.alert('Error', 'El límite debe ser un número mayor que 0.'); return; }
     setSaving(true);
-    try {
-      await onSave(slot!.id, { max_orders: max, is_active: isActive });
-      onClose();
-    } catch {
-      Alert.alert('Error', 'No se pudo guardar la franja horaria.');
-    } finally {
-      setSaving(false);
-    }
+    try { await onSave(slot!.id, { max_orders: max, is_active: isActive }); onClose(); }
+    catch { Alert.alert('Error', 'No se pudo guardar.'); }
+    finally { setSaving(false); }
   };
 
   if (!slot) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={modalStyles.backdrop}>
-        <View style={modalStyles.sheet}>
-          <Text style={modalStyles.title}>Editar Franja</Text>
-          <Text style={modalStyles.slotTime}>{slot.start_time} — {slot.end_time}</Text>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={em.backdrop} onPress={onClose}>
+        <Animated.View
+          style={[em.sheet, { transform: [{ translateY: slideAnim }] }]}
+        >
+          <Pressable>
+            {/* Handle */}
+            <View style={em.handle} />
 
-          <Text style={modalStyles.fieldLabel}>Límite de pedidos</Text>
-          <TextInput
-            style={modalStyles.input}
-            value={maxOrders}
-            onChangeText={setMaxOrders}
-            keyboardType="numeric"
-            maxLength={3}
-          />
+            <Text style={em.label}>EDITAR FRANJA</Text>
+            <Text style={em.timeDisplay}>{slot.start_time} – {slot.end_time}</Text>
 
-          {/* Toggle activo */}
-          <View style={modalStyles.toggleRow}>
-            <Text style={modalStyles.fieldLabel}>Franja activa</Text>
-            <TouchableOpacity
-              style={[modalStyles.toggleBtn, isActive ? modalStyles.toggleOn : modalStyles.toggleOff]}
-              onPress={() => setIsActive(v => !v)}
-            >
-              <Text style={modalStyles.toggleText}>{isActive ? '✓ Activa' : '✗ Inactiva'}</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Límite */}
+            <Text style={em.fieldLabel}>Límite de pedidos</Text>
+            <View style={em.inputRow}>
+              <TouchableOpacity
+                style={em.stepper}
+                onPress={() => setMaxOrders(v => String(Math.max(1, parseInt(v || '1') - 1)))}
+              >
+                <Text style={em.stepperText}>–</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={em.input}
+                value={maxOrders}
+                onChangeText={setMaxOrders}
+                keyboardType="numeric"
+                maxLength={3}
+                textAlign="center"
+              />
+              <TouchableOpacity
+                style={em.stepper}
+                onPress={() => setMaxOrders(v => String(parseInt(v || '0') + 1))}
+              >
+                <Text style={em.stepperText}>+</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={modalStyles.actions}>
-            <TouchableOpacity style={modalStyles.cancelBtn} onPress={onClose}>
-              <Text style={modalStyles.cancelText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[modalStyles.saveBtn, saving && { opacity: 0.5 }]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              <Text style={modalStyles.saveText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+            {/* Toggle */}
+            <View style={em.toggleRow}>
+              <View>
+                <Text style={em.fieldLabel}>Estado de la franja</Text>
+                <Text style={em.toggleSub}>
+                  {isActive ? 'Visible para los alumnos' : 'Oculta para los alumnos'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[em.togglePill, isActive ? em.pillOn : em.pillOff]}
+                onPress={() => setIsActive(v => !v)}
+              >
+                <Animated.View style={[em.pillThumb, isActive ? em.thumbRight : em.thumbLeft]} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Acciones */}
+            <View style={em.actions}>
+              <TouchableOpacity style={em.cancelBtn} onPress={onClose}>
+                <Text style={em.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[em.saveBtn, saving && { opacity: 0.5 }]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                <Text style={em.saveText}>{saving ? 'Guardando...' : 'Guardar cambios'}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
     </Modal>
   );
 }
 
-const modalStyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+const em = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(26,51,41,0.5)', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: C.white,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 24, paddingBottom: 40,
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 },
-  slotTime: { fontSize: 28, fontWeight: '900', color: '#FF6B35', marginBottom: 20 },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 },
-  input: {
-    backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14,
-    fontSize: 20, fontWeight: '700', color: '#1a1a2e', marginBottom: 16,
+  handle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: C.light, alignSelf: 'center', marginBottom: 24,
   },
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  toggleBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  toggleOn: { backgroundColor: '#d4edda' },
-  toggleOff: { backgroundColor: '#f8d7da' },
-  toggleText: { fontWeight: '700', fontSize: 14 },
+  label: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2, marginBottom: 6 },
+  timeDisplay: { fontSize: 34, fontWeight: '900', color: C.dark, letterSpacing: -1, marginBottom: 24 },
+  fieldLabel: { fontSize: 11, fontWeight: '800', color: C.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  stepper: {
+    width: 44, height: 44, borderRadius: radius.sm,
+    backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center',
+  },
+  stepperText: { fontSize: 22, fontWeight: '700', color: C.dark },
+  input: {
+    flex: 1, backgroundColor: C.bg, borderRadius: radius.md,
+    padding: 12, fontSize: 24, fontWeight: '900', color: C.dark,
+    borderWidth: 2, borderColor: C.light,
+  },
+  toggleRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 28,
+  },
+  toggleSub: { fontSize: 12, color: C.muted, marginTop: 2 },
+  togglePill: {
+    width: 52, height: 28, borderRadius: 14, padding: 3,
+    justifyContent: 'center',
+  },
+  pillOn:  { backgroundColor: C.mid },
+  pillOff: { backgroundColor: C.subtle },
+  pillThumb: {
+    width: 22, height: 22, borderRadius: 11, backgroundColor: C.white,
+    ...shadow.card,
+  },
+  thumbRight: { alignSelf: 'flex-end' },
+  thumbLeft:  { alignSelf: 'flex-start' },
   actions: { flexDirection: 'row', gap: 12 },
   cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 12,
-    backgroundColor: '#f5f5f5', alignItems: 'center',
+    flex: 1, padding: 14, borderRadius: radius.md,
+    backgroundColor: C.subtle, alignItems: 'center',
   },
-  cancelText: { fontWeight: '700', color: '#666' },
-  saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#FF6B35', alignItems: 'center' },
-  saveText: { fontWeight: '700', color: '#fff', fontSize: 15 },
+  cancelText: { fontWeight: '700', color: C.muted, fontSize: 14 },
+  saveBtn: {
+    flex: 2, padding: 14, borderRadius: radius.md,
+    backgroundColor: C.dark, alignItems: 'center',
+  },
+  saveText: { fontWeight: '800', color: C.white, fontSize: 14 },
 });
 
-// ── Pantalla principal de configuración ──────────────────────────────
+// ── Tarjeta de franja ────────────────────────────────────────────────
+function SlotCard({ item, index, onPress }: { item: TimeSlot; index: number; onPress: () => void }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue: 1, useNativeDriver: true,
+      tension: 50, friction: 12, delay: index * 60,
+    }).start();
+  }, []);
+
+  const pct = item.current_orders != null
+    ? Math.round((item.current_orders / item.max_orders) * 100)
+    : 0;
+
+  return (
+    <Animated.View style={{
+      opacity: anim,
+      transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [16,0] }) }],
+    }}>
+      <TouchableOpacity style={sc2.card} onPress={onPress} activeOpacity={0.8}>
+        {/* Indicador de estado */}
+        <View style={[sc2.statusStripe, { backgroundColor: item.is_active ? C.mid : C.subtle }]} />
+
+        <View style={sc2.content}>
+          <View style={sc2.topRow}>
+            <View>
+              <Text style={sc2.timeText}>{item.start_time} – {item.end_time}</Text>
+              <Text style={sc2.limitText}>Límite: {item.max_orders} pedidos</Text>
+            </View>
+            <View style={[sc2.badge, item.is_active ? sc2.badgeActive : sc2.badgeInactive]}>
+              {/* Punto de estado — Ionicons "ellipse" 6px */}
+              <View style={[sc2.badgeDot, { backgroundColor: item.is_active ? C.mid : C.muted }]} />
+              <Text style={[sc2.badgeText, { color: item.is_active ? C.mid : C.muted }]}>
+                {item.is_active ? 'Activa' : 'Inactiva'}
+              </Text>
+            </View>
+          </View>
+
+          <OccupancyBar current={item.current_orders} max={item.max_orders} />
+
+          <Text style={sc2.editHint}>Toca para editar</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+const sc2 = StyleSheet.create({
+  card: {
+    flexDirection: 'row', backgroundColor: C.white,
+    borderRadius: radius.md, marginBottom: 10,
+    overflow: 'hidden', ...shadow.card,
+  },
+  statusStripe: { width: 5 },
+  content: { flex: 1, padding: 14 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  timeText: { fontSize: 20, fontWeight: '900', color: C.dark, letterSpacing: -0.5 },
+  limitText: { fontSize: 12, color: C.muted, marginTop: 2, fontWeight: '500' },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+  },
+  badgeActive:   { backgroundColor: C.successBg },
+  badgeInactive: { backgroundColor: C.subtle },
+  badgeDot: { width: 6, height: 6, borderRadius: 3 },
+  badgeText: { fontSize: 11, fontWeight: '800' },
+  editHint: { fontSize: 10, color: C.muted, marginTop: 8, textAlign: 'right', letterSpacing: 0.3 },
+});
+
+// ── Pantalla principal ───────────────────────────────────────────────
 export default function SettingsScreen() {
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [slots, setSlots]             = useState<TimeSlot[]>([]);
+  const [loading, setLoading]         = useState(true);
   const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -139,17 +299,12 @@ export default function SettingsScreen() {
 
   const loadSlots = async () => {
     setLoading(true);
-    try {
-      const data = await getSlots();
-      setSlots(data);
-    } catch {
-      Alert.alert('Error', 'No se pudieron cargar las franjas horarias.');
-    } finally {
-      setLoading(false);
-    }
+    try { const data = await getSlots(); setSlots(data); }
+    catch { Alert.alert('Error', 'No se pudieron cargar las franjas horarias.'); }
+    finally { setLoading(false); }
   };
 
-  const handleSaveSlot = async (id: string, data: Partial<TimeSlot>) => {
+  const handleSave = async (id: string, data: Partial<TimeSlot>) => {
     await updateSlot(id, data);
     await loadSlots();
   };
@@ -159,62 +314,34 @@ export default function SettingsScreen() {
     setModalVisible(true);
   };
 
-  // ── Ocupación visual ──────────────────────────────────────────────
-  const OccupancyBar = ({ current = 0, max }: { current?: number; max: number }) => {
-    const pct = Math.min((current / max) * 100, 100);
-    const color = pct > 80 ? '#e74c3c' : pct > 50 ? '#f39c12' : '#2ecc71';
-    return (
-      <View style={occStyles.container}>
-        <View style={occStyles.track}>
-          <View style={[occStyles.fill, { width: `${pct}%` as any, backgroundColor: color }]} />
-        </View>
-        <Text style={occStyles.label}>{current}/{max}</Text>
-      </View>
-    );
-  };
-
-  const occStyles = StyleSheet.create({
-    container: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-    track: { flex: 1, height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden' },
-    fill: { height: '100%', borderRadius: 3 },
-    label: { fontSize: 12, fontWeight: '700', color: '#666', minWidth: 36, textAlign: 'right' },
-  });
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.pageTitle}>Franjas Horarias</Text>
-      <Text style={styles.pageSubtitle}>Configura los límites y la disponibilidad de cada tramo</Text>
+    <View style={ps.root}>
+      {/* Sub-cabecera de contexto */}
+      <View style={ps.subHeader}>
+        <Text style={ps.pageLabel}>CONFIGURACIÓN</Text>
+        <Text style={ps.pageTitle}>Franjas Horarias</Text>
+        <Text style={ps.pageSub}>
+          Define límites de capacidad y activa o desactiva tramos.
+        </Text>
+      </View>
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <Text style={styles.loadingText}>Cargando franjas...</Text>
+        <View style={ps.loading}>
+          <View style={ps.loadingDot} />
+          <Text style={ps.loadingText}>Cargando franjas...</Text>
         </View>
       ) : (
         <FlatList
           data={slots}
           keyExtractor={s => s.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.slotCard} onPress={() => openEdit(item)}>
-              <View style={styles.slotHeader}>
-                <View>
-                  <Text style={styles.slotTime}>{item.start_time} — {item.end_time}</Text>
-                  <Text style={styles.slotSub}>Límite: {item.max_orders} pedidos</Text>
-                </View>
-                <View style={[styles.statusBadge, item.is_active ? styles.badgeActive : styles.badgeInactive]}>
-                  <Text style={styles.statusBadgeText}>{item.is_active ? 'Activa' : 'Inactiva'}</Text>
-                </View>
-              </View>
-
-              <OccupancyBar current={item.current_orders} max={item.max_orders} />
-
-              <Text style={styles.editHint}>Toca para editar →</Text>
-            </TouchableOpacity>
+          renderItem={({ item, index }) => (
+            <SlotCard item={item} index={index} onPress={() => openEdit(item)} />
           )}
+          contentContainerStyle={ps.list}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
           ListEmptyComponent={
-            <View style={styles.loadingBox}>
-              <Text style={styles.loadingText}>No hay franjas configuradas.</Text>
+            <View style={ps.loading}>
+              <Text style={ps.loadingText}>No hay franjas configuradas.</Text>
             </View>
           }
         />
@@ -224,28 +351,24 @@ export default function SettingsScreen() {
         slot={editingSlot}
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={handleSaveSlot}
+        onSave={handleSave}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8', padding: 16 },
-  pageTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a2e' },
-  pageSubtitle: { fontSize: 13, color: '#888', marginBottom: 20, marginTop: 4 },
-  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { fontSize: 15, color: '#aaa' },
-  slotCard: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
+const ps = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  subHeader: {
+    backgroundColor: C.white, paddingHorizontal: 20,
+    paddingTop: 16, paddingBottom: 20,
+    borderBottomWidth: 1, borderBottomColor: C.subtle,
   },
-  slotHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  slotTime: { fontSize: 22, fontWeight: '800', color: '#1a1a2e' },
-  slotSub: { fontSize: 13, color: '#aaa', marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeActive: { backgroundColor: '#d4edda' },
-  badgeInactive: { backgroundColor: '#f8d7da' },
-  statusBadgeText: { fontSize: 12, fontWeight: '700' },
-  editHint: { fontSize: 11, color: '#ccc', marginTop: 10, textAlign: 'right' },
+  pageLabel: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2, marginBottom: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '900', color: C.dark, letterSpacing: -0.5 },
+  pageSub: { fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 18 },
+  list: { padding: 16, paddingBottom: 40 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 40 },
+  loadingDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: C.mid },
+  loadingText: { fontSize: 14, color: C.muted },
 });

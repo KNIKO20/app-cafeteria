@@ -2,7 +2,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from adapters.auth.permissions import IsAdminRole
 from core.domain.exceptions.domain_exceptions import ProductNotFoundException
 from config.di_container import get_create_product_use_case, get_delete_product_use_case, get_pending_orders_use_case, get_update_product_use_case
@@ -28,17 +28,37 @@ class ProductManagementView(APIView):
                 "stock": p.stock
             } for p in products], status=200)
         except Exception as e:
+            print(e)
             return Response({"error": "Error interno"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
     def post(self, request):
         use_case = get_create_product_use_case()
         # Mapeo manual o usando los campos del request para asegurar que la Dataclass sea válida
+        data = request.data
+        is_many = isinstance(data, list)
         try:
             from core.application.use_cases.create_product import CreateProductInput
-            input_dto = CreateProductInput(**request.data) 
-            product_output = use_case.execute(input_dto)
-            return Response({"message": "Producto creado", "id": product_output.id}, status=201)
+            if is_many:
+                # Procesamos múltiples productos
+                created_ids = []
+                for item in data:
+                    input_dto = CreateProductInput(**item)
+                    product_output = use_case.execute(input_dto)
+                    created_ids.append(product_output.id)
+                
+                return Response({
+                    "message": f"{len(created_ids)} productos creados", 
+                    "ids": created_ids
+                }, status=201)
+            else:
+                # Procesamos un solo producto (comportamiento original)
+                input_dto = CreateProductInput(**data)
+                product_output = use_case.execute(input_dto)
+                return Response({
+                    "message": "Producto creado", 
+                    "id": product_output.id
+                }, status=201)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 

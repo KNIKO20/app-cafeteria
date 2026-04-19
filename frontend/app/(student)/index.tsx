@@ -232,10 +232,15 @@ const lc = StyleSheet.create({
 
 // ── Chips de categoría ───────────────────────────────────────────────
 const CATEGORIES = [
-  { slug: 'bocadillo', label: 'Bocadillos' },
-  { slug: 'bebida',    label: 'Bebidas'    },
-  { slug: 'postre',    label: 'Postres'    },
-  { slug: 'saludable', label: 'Saludable'  },
+  { slug: 'bocadillo_caliente', label: 'Bocadillos Calientes' },
+  { slug: 'bocadillo_frio',    label: 'Bocadillos Fríos' },
+  { slug: 'bocadillo_especial', label: 'Especiales' },
+  { slug: 'sandwich',           label: 'Sándwiches' },
+  { slug: 'bebida',             label: 'Bebidas' },
+  { slug: 'cafeteria',          label: 'Café e Infusiones' },
+  { slug: 'bolleria',           label: 'Bollería' },
+  { slug: 'snack',              label: 'Snacks y Tapas' },
+  { slug: 'menu',               label: 'Menú Diario' },
 ];
 
 // ── Pantalla principal ───────────────────────────────────────────────

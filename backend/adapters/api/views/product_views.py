@@ -26,6 +26,7 @@ class ProductListView(APIView):
                 "stock": p.stock
             } for p in products], status=200)
         except ValueError as e:
+            print(e)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:

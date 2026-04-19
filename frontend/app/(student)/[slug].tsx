@@ -1,5 +1,3 @@
-// app/(student)/[slug].tsx
-// Pantalla dinámica de categoría.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,14 +20,16 @@ const C = {
 };
 
 const CATEGORY_META: Record<string, { title: string; description: string }> = {
-  bocadillo: { title: 'Bocadillos',  description: 'Pan recién hecho y rellenos del día' },
-  bocadillos: { title: 'Bocadillos', description: 'Pan recién hecho y rellenos del día' },
-  bebida:    { title: 'Bebidas',     description: 'Calientes, frías y zumos naturales'  },
-  bebidas:   { title: 'Bebidas',     description: 'Calientes, frías y zumos naturales'  },
-  postre:    { title: 'Postres',     description: 'Dulces y repostería artesanal'        },
-  postres:   { title: 'Postres',     description: 'Dulces y repostería artesanal'        },
-  saludable: { title: 'Saludable',  description: 'Ensaladas, frutas y opciones light'   },
-  saludables: { title: 'Saludable',  description: 'Ensaladas, frutas y opciones light'   },
+  bocadillo_caliente: { title: 'Bocadillos Calientes', description: 'Recién hechos a la plancha' },
+  bocadillo_frio:     { title: 'Bocadillos Fríos',    description: 'Embutidos de calidad y pan crujiente' },
+  bocadillo_especial: { title: 'Especiales',          description: 'Nuestras combinaciones premium' },
+  sandwich:           { title: 'Sándwiches',          description: 'Sándwiches clásicos y hamburguesas' },
+  bebida:             { title: 'Bebidas',             description: 'Refrescos, zumos y agua' },
+  cafeteria:          { title: 'Cafetería',           description: 'Cafés, infusiones y chocolate' },
+  bolleria:           { title: 'Bollería',            description: 'Dulces y repostería recién horneada' },
+  snack:              { title: 'Snacks y Tapas',      description: 'Patatas, empanadas y pinchos' },
+  menu:               { title: 'Menú Diario',         description: 'La mejor comida casera completa' },
+  suplemento:         { title: 'Extras',              description: 'Añade ingredientes a tu gusto' },
 };
 
 interface Product {

@@ -1,4 +1,4 @@
-// Pantalla de pago — diseño premium y coherente con la paleta verde
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, ActivityIndicator,
@@ -174,7 +174,7 @@ export default function PaymentScreen() {
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>{total} €</Text>
+            <Text style={styles.totalAmount}>{Number(total ?? 0).toFixed(2)} €</Text>
           </View>
 
           {/* Barra decorativa verde */}

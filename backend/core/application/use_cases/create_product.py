@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 import uuid
 
 from core.domain.ports.product_repository import ProductRepository
@@ -16,6 +16,7 @@ class CreateProductInput:
     stock: Optional[int] = None         # None = sin límite de stock
     #puede ser null/None o int
     preparation_minutes: int = 5          
+    allergens: List[str] = field(default_factory=list)
 
 @dataclass
 class CreateProductOutput:
@@ -26,7 +27,7 @@ class CreateProductOutput:
     category: str
     is_available: bool = True
     stock: Optional[int] = None         # None = sin límite de stock
- 
+    allergens: List[str] = field(default_factory=list)
     
 class CreateProductUseCase:
     def __init__(self, product_repo: ProductRepository):
@@ -44,7 +45,8 @@ class CreateProductUseCase:
             is_available=input_data.is_available,
             stock=input_data.stock,
             preparation_minutes=input_data.preparation_minutes,
-            is_deleted=False
+            is_deleted=False,
+            allergens=input_data.allergens
         )
 
         self.product_repo.save(product)
@@ -55,5 +57,6 @@ class CreateProductUseCase:
             category=product.category.value,
             is_available=product.is_available,
             stock=product.stock,
+            allergens=product.allergens
         )
         
