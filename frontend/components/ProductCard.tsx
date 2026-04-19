@@ -1,16 +1,13 @@
 // components/ProductCard.tsx — Tarjeta de producto del catálogo rediseñada
-// Iconos sugeridos (Ionicons de @expo/vector-icons):
-//   Añadir:    "add"          (18px blanco, dentro del círculo verde)
-//   Favorito:  "heart"        (relleno) / "heart-outline" (vacío)
-//   Agotado:   "close-circle" (16px, rojo)
-
 import React, { useState } from 'react';
 import {
   View, Text, Image, TouchableOpacity,
   StyleSheet, Animated,
+  Pressable,
 } from 'react-native';
 import { resolveImage, getProductImage } from '../utils/imageHelper';
 import { C, radius, shadow } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   product: {
@@ -36,8 +33,33 @@ export default function ProductCard({
 
   // Micro-animación al pulsar
   const pressAnim = React.useRef(new Animated.Value(1)).current;
-  const pressIn   = () => Animated.spring(pressAnim, { toValue: 0.95, useNativeDriver: true, tension: 300, friction: 10 }).start();
-  const pressOut  = () => Animated.spring(pressAnim, { toValue: 1,    useNativeDriver: true, tension: 300, friction: 10 }).start();
+  const pressIn   = () =>     Animated.timing(pressAnim, {
+      toValue: 0.8,
+      duration: 20,
+      useNativeDriver: true,
+    }).start();
+  const pressOut  = () =>     Animated.timing(pressAnim, {
+      toValue: 1,
+      duration: 20,
+      useNativeDriver: true,
+    }).start();
+
+const favAnim = React.useRef(new Animated.Value(1)).current;
+
+const favIn = () =>
+  Animated.timing(favAnim, {
+    toValue: 0.8,
+    duration: 60,
+    useNativeDriver: true,
+  }).start();
+
+const favOut = () =>
+  Animated.timing(favAnim, {
+    toValue: 1,
+    duration: 60,
+    useNativeDriver: true,
+  }).start();
+
 
   return (
     <Animated.View
@@ -73,17 +95,32 @@ export default function ProductCard({
             </View>
           )}
 
-          {/* Botón de favorito — Ionicons "heart" / "heart-outline" */}
+          {/* Botón de favorito */}
           {onFavorite && (
-            <TouchableOpacity style={s.favBtn} onPress={onFavorite} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-              <View style={[s.heart, isFavorite && s.heartFilled]} />
-            </TouchableOpacity>
+            <Pressable
+              onPress={onFavorite}
+              onPressIn={favIn}
+              onPressOut={favOut}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={s.favBtn}
+            >
+              <Animated.View style={{ transform: [{ scale: favAnim }] }}>
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={18}
+                  color={isFavorite ? "#e74c3c" : C.muted}
+                />
+              </Animated.View>
+            </Pressable>
           )}
+
+
 
           {/* Overlay si no disponible */}
           {!product.is_available && (
             <View style={s.unavailableOverlay}>
-              <Text style={s.unavailableText}>Sin stock</Text>
+              <Ionicons name="close-circle" size={24} color={C.white} style={{ marginBottom: 4 }} />
+              <Text style={s.unavailableText}>AGOTADO</Text>
             </View>
           )}
         </View>
@@ -95,10 +132,13 @@ export default function ProductCard({
           <View style={s.bottom}>
             <Text style={s.price}>{product.price.toFixed(2)} €</Text>
 
-            {/* Botón "+" circular */}
+            {/* Botón "+" circular o icono de cierre si no hay stock */}
             <View style={[s.addCircle, !product.is_available && s.addCircleDisabled]}>
-              {/* Ionicons "add" 16px / "close" si no disponible */}
-              <Text style={s.addText}>{product.is_available ? '+' : '×'}</Text>
+              <Ionicons 
+                name={product.is_available ? "add" : "close"} 
+                size={product.is_available ? 20 : 18} 
+                color={C.white} 
+              />
             </View>
           </View>
         </View>
@@ -108,8 +148,8 @@ export default function ProductCard({
 }
 
 const s = StyleSheet.create({
-  wrap:         { flex: 1, margin: 5 },
-  wrapDisabled: { opacity: 0.45 },
+  wrap:         { flex: 1, margin: 6 },
+  wrapDisabled: { opacity: 0.7 },
 
   card: {
     backgroundColor: C.white,
@@ -121,57 +161,47 @@ const s = StyleSheet.create({
   // Imagen
   imageWrap: { position: 'relative' },
   image: {
-    width: '100%', height: 105,
+    width: '100%', height: 110,
     backgroundColor: C.subtle,
   },
 
-  // Badge de categoría — esquina inferior izquierda
+  // Badge de categoría
   catBadge: {
     position: 'absolute', bottom: 6, left: 7,
-    backgroundColor: 'rgba(26,51,41,0.78)',
-    paddingHorizontal: 7, paddingVertical: 3,
-    borderRadius: 7,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6,
   },
   catText: {
     fontSize: 9, fontWeight: '800',
-    color: C.white, textTransform: 'capitalize',
+    color: C.white, textTransform: 'uppercase',
   },
 
-  // Botón favorito — esquina superior derecha
+  // Botón favorito
   favBtn: {
     position: 'absolute', top: 7, right: 7,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center', justifyContent: 'center',
     ...shadow.card,
-  },
-  // Icono corazón simple hecho con View (usar Ionicons "heart" para mejor resultado)
-  heart: {
-    width: 13, height: 11,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: C.muted,
-  },
-  heartFilled: {
-    backgroundColor: '#e74c3c',
-    borderColor: '#e74c3c',
   },
 
   // Overlay agotado
   unavailableOverlay: {
-    position: 'absolute', inset: 0,
-    backgroundColor: 'rgba(26,51,41,0.5)',
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(26,51,41,0.65)',
     alignItems: 'center', justifyContent: 'center',
-  } as any,
+  },
   unavailableText: {
-    fontSize: 12, fontWeight: '900',
-    color: C.white, letterSpacing: 0.5,
+    fontSize: 10, fontWeight: '900',
+    color: C.white, letterSpacing: 1,
   },
 
   // Información
-  info: { padding: 10 },
+  info: { padding: 12 },
   name: {
-    fontSize: 13, fontWeight: '700',
+    fontSize: 14, fontWeight: '700',
     color: C.dark, lineHeight: 18,
     minHeight: 36, marginBottom: 8,
   },
@@ -181,20 +211,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   price: {
-    fontSize: 16, fontWeight: '900',
-    color: C.dark, letterSpacing: -0.3,
+    fontSize: 17, fontWeight: '900',
+    color: C.dark,
   },
 
-  // Botón "+" circular
+  // Botón "+" o estado bloqueado
   addCircle: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: C.dark,
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: C.mid, // O el color corporativo que prefieras
     alignItems: 'center', justifyContent: 'center',
+    ...shadow.card,
   },
   addCircleDisabled: { backgroundColor: C.muted },
-  addText: {
-    fontSize: 20, fontWeight: '300',
-    color: C.white, lineHeight: 24,
-    marginTop: -2,
-  },
 });

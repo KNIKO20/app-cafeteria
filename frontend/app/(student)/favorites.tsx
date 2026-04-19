@@ -1,4 +1,4 @@
-// Pantalla Favoritos — diseño premium con animaciones
+
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, Image, Animated } from 'react-native';
 import { router } from 'expo-router';

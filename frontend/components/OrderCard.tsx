@@ -1,12 +1,7 @@
-// components/OrderCard.tsx — Tarjeta de pedido del alumno rediseñada
-// Iconos sugeridos (Ionicons de @expo/vector-icons):
-//   Código de recogida: "barcode-outline"
-//   Reloj:              "time-outline"
-//   Estado listo:       "checkmark-circle-outline"
-
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { C, radius, shadow } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface OrderItem { product_name: string; quantity: number; }
 interface OrderData {
@@ -20,13 +15,13 @@ interface OrderData {
 
 // ── Configuración visual de estados ─────────────────────────────────
 const STATUS_CONFIG: Record<string, {
-  label: string; color: string; bg: string; stripe: string;
+  label: string; color: string; bg: string; stripe: string; icon: keyof typeof Ionicons.glyphMap;
 }> = {
-  pending_payment: { label: 'Pendiente de pago',  color: C.muted,   bg: C.subtle,    stripe: C.muted   },
-  paid:            { label: 'Pagado',              color: C.warning, bg: C.warningBg, stripe: C.accent  },
-  preparing:       { label: 'En preparación',      color: C.info,    bg: C.infoBg,    stripe: C.info    },
-  ready:           { label: 'Listo para recoger',  color: C.success, bg: C.successBg, stripe: C.mid     },
-  collected:       { label: 'Recogido',            color: C.muted,   bg: C.subtle,    stripe: C.muted   },
+  pending_payment: { label: 'Pendiente de pago', color: C.muted, bg: C.subtle, stripe: C.muted, icon: 'time-outline' },
+  paid:            { label: 'Pagado',            color: C.warning, bg: C.warningBg, stripe: C.accent, icon: 'card-outline' },
+  preparing:       { label: 'En preparación',     color: C.info,    bg: C.infoBg,    stripe: C.info,   icon: 'hammer-outline' },
+  ready:           { label: 'Listo para recoger', color: C.success, bg: C.successBg, stripe: C.mid,    icon: 'checkmark-circle-outline' },
+  collected:       { label: 'Recogido',           color: C.muted,   bg: C.subtle,    stripe: C.muted,  icon: 'archive-outline' },
 };
 
 export default function OrderCard({ order }: { order: OrderData }) {
@@ -49,32 +44,30 @@ export default function OrderCard({ order }: { order: OrderData }) {
     <Animated.View style={[s.wrap, {
       opacity: anim,
       transform: [{
-        translateY: anim.interpolate({ inputRange: [0,1], outputRange: [12,0] }),
+        translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }),
       }],
     }]}>
       <View style={s.card}>
-        {/* Barra lateral de color según estado */}
         <View style={[s.stripe, { backgroundColor: st.stripe }]} />
 
         <View style={s.body}>
-          {/* Cabecera: ID + badge de estado */}
           <View style={s.header}>
             <View>
               <Text style={s.orderLabel}>PEDIDO</Text>
               <Text style={s.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
             </View>
             <View style={[s.badge, { backgroundColor: st.bg }]}>
+              <Ionicons name={st.icon} size={12} color={st.color} style={{ marginRight: 4 }} />
               <Text style={[s.badgeText, { color: st.color }]}>
                 {st.label.toUpperCase()}
               </Text>
             </View>
           </View>
 
-          {/* Lista de productos */}
           <View style={s.itemsSection}>
             {order.items.map((item, i) => (
               <View key={i} style={s.itemRow}>
-                <View style={s.bullet} />
+                <Ionicons name="caret-forward-outline" size={10} color={C.mid} />
                 <Text style={s.itemText}>
                   <Text style={s.itemQty}>{item.quantity}×  </Text>
                   {item.product_name}
@@ -83,16 +76,18 @@ export default function OrderCard({ order }: { order: OrderData }) {
             ))}
           </View>
 
-          {/* Footer: fecha, total y código */}
           <View style={s.footer}>
             <View>
-              <Text style={s.dateText}>{date}</Text>
+              <View style={s.dateRow}>
+                <Ionicons name="calendar-outline" size={12} color={C.muted} style={{ marginRight: 4 }} />
+                <Text style={s.dateText}>{date}</Text>
+              </View>
               <Text style={s.totalText}>{order.total.toFixed(2)} €</Text>
             </View>
 
             {order.pickup_code && (
               <View style={s.codeBox}>
-                {/* Ionicons "barcode-outline" encima del código */}
+                <Ionicons name="barcode-outline" size={18} color={C.muted} />
                 <Text style={s.codeLabel}>RECOGER CON</Text>
                 <Text style={s.codeValue}>{order.pickup_code}</Text>
               </View>
@@ -106,70 +101,23 @@ export default function OrderCard({ order }: { order: OrderData }) {
 
 const s = StyleSheet.create({
   wrap: { marginBottom: 12 },
-
-  card: {
-    flexDirection: 'row',
-    backgroundColor: C.white,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    ...shadow.card,
-  },
-
+  card: { flexDirection: 'row', backgroundColor: C.white, borderRadius: radius.md, overflow: 'hidden', ...shadow.card },
   stripe: { width: 5 },
-
   body: { flex: 1, padding: 14 },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  orderLabel: {
-    fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 1.5,
-  },
-  orderId: {
-    fontSize: 16, fontWeight: '900', color: C.dark, letterSpacing: 0.5,
-  },
-  badge: {
-    paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: 10, maxWidth: 160,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  orderLabel: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 1.5 },
+  orderId: { fontSize: 16, fontWeight: '900', color: C.dark, letterSpacing: 0.5 },
+  badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   badgeText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.3 },
-
-  itemsSection: {
-    borderTopWidth: 1, borderBottomWidth: 1,
-    borderColor: C.subtle,
-    paddingVertical: 8, marginBottom: 10, gap: 4,
-  },
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bullet: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.mid },
+  itemsSection: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.subtle, paddingVertical: 10, marginBottom: 12, gap: 6 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemText: { fontSize: 13, color: '#444', fontWeight: '500', flex: 1 },
   itemQty: { fontWeight: '900', color: C.mid },
-
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  dateText: { fontSize: 11, color: C.muted, fontWeight: '500', marginBottom: 2 },
-  totalText: { fontSize: 20, fontWeight: '900', color: C.dark, letterSpacing: -0.5 },
-
-  // Código de recogida — prominente y oscuro
-  codeBox: {
-    alignItems: 'center',
-    backgroundColor: C.dark,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.sm,
-  },
-  codeLabel: {
-    fontSize: 8, fontWeight: '900',
-    color: C.muted, letterSpacing: 1.5,
-  },
-  codeValue: {
-    fontSize: 22, fontWeight: '900',
-    color: C.accent, letterSpacing: 4,
-    marginTop: 2,
-  },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  dateText: { fontSize: 11, color: C.muted, fontWeight: '500' },
+  totalText: { fontSize: 22, fontWeight: '900', color: C.dark, letterSpacing: -0.5 },
+  codeBox: { alignItems: 'center', backgroundColor: C.dark, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.md, minWidth: 110 },
+  codeLabel: { fontSize: 8, fontWeight: '900', color: C.muted, letterSpacing: 1.2, marginTop: 4 },
+  codeValue: { fontSize: 24, fontWeight: '900', color: C.accent, letterSpacing: 4, marginTop: 0 },
 });

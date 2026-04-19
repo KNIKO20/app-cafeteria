@@ -1,12 +1,3 @@
-// (admin)/inventory.tsx — Inventario de productos rediseñado
-// Iconos sugeridos (Ionicons):
-//   Buscar:    "search-outline"
-//   Añadir:    "add-outline"
-//   Editar:    "pencil-outline"
-//   Stock:     "layers-outline"
-//   Eliminar:  "trash-outline"
-//   Activo:    "checkmark-circle" (relleno verde)
-//   Agotado:   "close-circle"     (relleno rojo)
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {

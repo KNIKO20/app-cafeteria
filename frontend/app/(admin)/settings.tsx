@@ -1,18 +1,12 @@
-// (admin)/settings.tsx — Gestión de franjas horarias rediseñada
-// Iconos sugeridos (Ionicons):
-//   Franja activa:   "checkmark-circle-outline"
-//   Franja inactiva: "close-circle-outline"
-//   Editar:          "pencil-outline"
-//   Reloj:           "time-outline"
-
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  TextInput, Alert, Modal, Animated, Pressable,
+  TextInput, Alert, Modal, Animated, Pressable, ActivityIndicator
 } from 'react-native';
 import { getSlots, updateSlot } from '../../services/api';
 import { C, radius, shadow } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+
 interface TimeSlot {
   id: string;
   start_time: string;
@@ -97,20 +91,21 @@ function EditSlotModal({ slot, visible, onClose, onSave }: EditModalProps) {
           style={[em.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
           <Pressable>
-            {/* Handle */}
             <View style={em.handle} />
 
-            <Text style={em.label}>EDITAR FRANJA</Text>
+            <View style={em.headerRow}>
+               <Ionicons name="time-outline" size={18} color={C.muted} />
+               <Text style={em.label}>EDITAR FRANJA</Text>
+            </View>
             <Text style={em.timeDisplay}>{slot.start_time} – {slot.end_time}</Text>
 
-            {/* Límite */}
             <Text style={em.fieldLabel}>Límite de pedidos</Text>
             <View style={em.inputRow}>
               <TouchableOpacity
                 style={em.stepper}
                 onPress={() => setMaxOrders(v => String(Math.max(1, parseInt(v || '1') - 1)))}
               >
-                <Text style={em.stepperText}>–</Text>
+                <Ionicons name="remove-outline" size={24} color={C.dark} />
               </TouchableOpacity>
               <TextInput
                 style={em.input}
@@ -124,11 +119,10 @@ function EditSlotModal({ slot, visible, onClose, onSave }: EditModalProps) {
                 style={em.stepper}
                 onPress={() => setMaxOrders(v => String(parseInt(v || '0') + 1))}
               >
-                <Text style={em.stepperText}>+</Text>
+                <Ionicons name="add-outline" size={24} color={C.dark} />
               </TouchableOpacity>
             </View>
 
-            {/* Toggle */}
             <View style={em.toggleRow}>
               <View>
                 <Text style={em.fieldLabel}>Estado de la franja</Text>
@@ -144,7 +138,6 @@ function EditSlotModal({ slot, visible, onClose, onSave }: EditModalProps) {
               </TouchableOpacity>
             </View>
 
-            {/* Acciones */}
             <View style={em.actions}>
               <TouchableOpacity style={em.cancelBtn} onPress={onClose}>
                 <Text style={em.cancelText}>Cancelar</Text>
@@ -175,7 +168,8 @@ const em = StyleSheet.create({
     width: 36, height: 4, borderRadius: 2,
     backgroundColor: C.light, alignSelf: 'center', marginBottom: 24,
   },
-  label: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2, marginBottom: 6 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  label: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2 },
   timeDisplay: { fontSize: 34, fontWeight: '900', color: C.dark, letterSpacing: -1, marginBottom: 24 },
   fieldLabel: { fontSize: 11, fontWeight: '800', color: C.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
@@ -183,7 +177,6 @@ const em = StyleSheet.create({
     width: 44, height: 44, borderRadius: radius.sm,
     backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center',
   },
-  stepperText: { fontSize: 22, fontWeight: '700', color: C.dark },
   input: {
     flex: 1, backgroundColor: C.bg, borderRadius: radius.md,
     padding: 12, fontSize: 24, fontWeight: '900', color: C.dark,
@@ -229,17 +222,12 @@ function SlotCard({ item, index, onPress }: { item: TimeSlot; index: number; onP
     }).start();
   }, []);
 
-  const pct = item.current_orders != null
-    ? Math.round((item.current_orders / item.max_orders) * 100)
-    : 0;
-
   return (
     <Animated.View style={{
       opacity: anim,
       transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [16,0] }) }],
     }}>
       <TouchableOpacity style={sc2.card} onPress={onPress} activeOpacity={0.8}>
-        {/* Indicador de estado */}
         <View style={[sc2.statusStripe, { backgroundColor: item.is_active ? C.mid : C.subtle }]} />
 
         <View style={sc2.content}>
@@ -249,8 +237,11 @@ function SlotCard({ item, index, onPress }: { item: TimeSlot; index: number; onP
               <Text style={sc2.limitText}>Límite: {item.max_orders} pedidos</Text>
             </View>
             <View style={[sc2.badge, item.is_active ? sc2.badgeActive : sc2.badgeInactive]}>
-              {/* Punto de estado — Ionicons "ellipse" 6px */}
-              <View style={[sc2.badgeDot, { backgroundColor: item.is_active ? C.mid : C.muted }]} />
+              <Ionicons 
+                name={item.is_active ? "checkmark-circle-outline" : "close-circle-outline"} 
+                size={14} 
+                color={item.is_active ? C.mid : C.muted} 
+              />
               <Text style={[sc2.badgeText, { color: item.is_active ? C.mid : C.muted }]}>
                 {item.is_active ? 'Activa' : 'Inactiva'}
               </Text>
@@ -259,7 +250,10 @@ function SlotCard({ item, index, onPress }: { item: TimeSlot; index: number; onP
 
           <OccupancyBar current={item.current_orders} max={item.max_orders} />
 
-          <Text style={sc2.editHint}>Toca para editar</Text>
+          <View style={sc2.footer}>
+            <Ionicons name="pencil-outline" size={12} color={C.muted} />
+            <Text style={sc2.editHint}>Toca para editar</Text>
+          </View>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -283,9 +277,9 @@ const sc2 = StyleSheet.create({
   },
   badgeActive:   { backgroundColor: C.successBg },
   badgeInactive: { backgroundColor: C.subtle },
-  badgeDot: { width: 6, height: 6, borderRadius: 3 },
   badgeText: { fontSize: 11, fontWeight: '800' },
-  editHint: { fontSize: 10, color: C.muted, marginTop: 8, textAlign: 'right', letterSpacing: 0.3 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 8 },
+  editHint: { fontSize: 10, color: C.muted, letterSpacing: 0.3 },
 });
 
 // ── Pantalla principal ───────────────────────────────────────────────
@@ -316,7 +310,6 @@ export default function SettingsScreen() {
 
   return (
     <View style={ps.root}>
-      {/* Sub-cabecera de contexto */}
       <View style={ps.subHeader}>
         <Text style={ps.pageLabel}>CONFIGURACIÓN</Text>
         <Text style={ps.pageTitle}>Franjas Horarias</Text>
@@ -327,7 +320,7 @@ export default function SettingsScreen() {
 
       {loading ? (
         <View style={ps.loading}>
-          <View style={ps.loadingDot} />
+          <ActivityIndicator size="large" color={C.mid} />
           <Text style={ps.loadingText}>Cargando franjas...</Text>
         </View>
       ) : (
@@ -341,6 +334,7 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={ps.loading}>
+               <Ionicons name="calendar-outline" size={48} color={C.subtle} />
               <Text style={ps.loadingText}>No hay franjas configuradas.</Text>
             </View>
           }
@@ -356,7 +350,6 @@ export default function SettingsScreen() {
     </View>
   );
 }
-
 const ps = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   subHeader: {

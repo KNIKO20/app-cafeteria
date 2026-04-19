@@ -1,4 +1,4 @@
-// Layout principal — drawer premium con animaciones y mejor navegación
+
 import { useRouter, useSegments, usePathname } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { useEffect, useState, useRef } from 'react';

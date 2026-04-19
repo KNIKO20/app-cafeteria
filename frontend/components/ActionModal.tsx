@@ -1,5 +1,3 @@
-// components/ActionModal.tsx — Modal de confirmación rediseñado
-// Usa Animated para entrada/salida suave con scale + fade.
 
 import React, { useEffect, useRef } from 'react';
 import {

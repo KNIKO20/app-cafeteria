@@ -12,7 +12,6 @@ from config.di_container import get_create_order_use_case, get_process_payment_u
 
 
 class CreateOrderView(APIView):
-    # ¡ACTIVAMOS LA AUTENTICACIÓN! Solo usuarios con JWT pueden crear pedidos
     permission_classes = [IsAuthenticatedHex]
 
     def post(self, request):

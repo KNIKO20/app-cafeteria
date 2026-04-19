@@ -1,10 +1,11 @@
-// Pantalla Carrito — diseño premium unificado con paleta verde
+
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, Alert, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { useCartStore } from '../../stores/cartStore';
 import { createOrder } from '../../services/api';
 import TimeslotPicker from '../../components/TimeslotPicker';
+import { Ionicons } from '@expo/vector-icons';
 
 const C = {
   dark:   '#1A3329',
@@ -31,15 +32,30 @@ function CartItem({
   useEffect(() => {
     Animated.spring(enterAnim, {
       toValue: 1, useNativeDriver: true,
-      tension: 55, friction: 11, delay: index * 60,
+      tension: 65, friction: 11, delay: index * 40, // Un poco más rápido al entrar
     }).start();
   }, []);
 
-  const animateQty = (fn: () => void) => {
-    Animated.sequence([
-      Animated.spring(qtyScale, { toValue: 1.3, useNativeDriver: true, tension: 300, friction: 6 }),
-      Animated.spring(qtyScale, { toValue: 1,   useNativeDriver: true, tension: 300, friction: 8 }),
-    ]).start(fn);
+  // Animación tipo "Pop" rápida
+  const animateQty = (callback: () => void) => {
+    // 1. Ejecutamos el cambio de estado inmediatamente para que el UI responda ya
+    callback(); 
+
+    // 2. Reiniciamos y disparamos la animación en paralelo
+    qtyScale.setValue(1); 
+    Animated.spring(qtyScale, {
+      toValue: 1.4,
+      useNativeDriver: true,
+      tension: 600, // Tensión muy alta para velocidad
+      friction: 10,
+    }).start(() => {
+      Animated.spring(qtyScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 400,
+        friction: 10,
+      }).start();
+    });
   };
 
   return (
@@ -47,39 +63,48 @@ function CartItem({
       s.item,
       {
         opacity: enterAnim,
-        transform: [{ translateX: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }],
+        transform: [{ 
+          translateX: enterAnim.interpolate({ 
+            inputRange: [0, 1], 
+            outputRange: [-20, 0] 
+          }) 
+        }],
       },
     ]}>
-      {/* Inicial del producto */}
+      {/* Icono con inicial */}
       <View style={s.itemIcon}>
-        <Text style={s.itemIconText}>{item.product_name[0]}</Text>
+        <Text style={s.itemIconText}>{item.product_name[0].toUpperCase()}</Text>
       </View>
 
       <View style={s.itemInfo}>
         <Text style={s.itemName} numberOfLines={1}>{item.product_name}</Text>
-        <Text style={s.itemUnit}>{item.price.toFixed(2)} € / ud</Text>
+        <Text style={s.itemUnit}>{item.price.toFixed(2)} €/ud</Text>
       </View>
 
       <View style={s.itemControls}>
         <Pressable
-          style={s.qtyBtn}
+          style={({ pressed }) => [s.qtyBtn, pressed && { opacity: 0.6 }]}
           onPress={() => animateQty(onDec)}
         >
-          <Text style={s.qtyBtnText}>−</Text>
+          <Ionicons name="remove-circle-outline" size={26} color={C.muted} />
         </Pressable>
 
-        <Animated.Text style={[s.qty, { transform: [{ scale: qtyScale }] }]}>
-          {item.quantity}
-        </Animated.Text>
+        <View style={s.qtyContainer}>
+          <Animated.Text style={[s.qty, { transform: [{ scale: qtyScale }] }]}>
+            {item.quantity}
+          </Animated.Text>
+        </View>
 
         <Pressable
-          style={[s.qtyBtn, s.qtyBtnAdd]}
+          style={({ pressed }) => [s.qtyBtn, pressed && { opacity: 0.6 }]}
           onPress={() => animateQty(onInc)}
         >
-          <Text style={[s.qtyBtnText, s.qtyBtnAddText]}>+</Text>
+          <Ionicons name="add-circle" size={26} color={C.mid} />
         </Pressable>
 
-        <Text style={s.itemTotal}>{(item.price * item.quantity).toFixed(2)} €</Text>
+        <View style={s.totalContainer}>
+           <Text style={s.itemTotal}>{(item.price * item.quantity).toFixed(2)}€</Text>
+        </View>
       </View>
     </Animated.View>
   );
@@ -297,5 +322,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 32, paddingVertical: 15, borderRadius: 14,
     shadowColor: C.mid, shadowOpacity: 0.30, shadowRadius: 8, elevation: 5,
   },
+  totalContainer: { marginLeft: 10, minWidth: 65, alignItems: 'flex-end' },
+  qtyContainer: { width: 30, alignItems: 'center' },
   goMenuText:   { color: C.white, fontWeight: '800', fontSize: 15 },
 });

@@ -1,4 +1,4 @@
-// Pantalla principal — diseño premium con animaciones fluidas
+
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
@@ -10,6 +10,7 @@ import { getMenu } from '../../services/api';
 import { useCartStore } from '../../stores/cartStore';
 import { useFavoritesStore } from '../../stores/favoritesStore';
 import { resolveImage, getProductImage } from '../../utils/imageHelper';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: W } = Dimensions.get('window');
 
@@ -56,11 +57,25 @@ function AnimatedButton({
   onPress: () => void; style?: any; children: React.ReactNode; activeScale?: number;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const press = () => Animated.spring(scale, { toValue: activeScale, useNativeDriver: true, tension: 200, friction: 10 }).start();
-  const release = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start(onPress);
+
+  const handlePressIn = () => {
+    Animated.spring(scale, { toValue: activeScale, useNativeDriver: true, tension: 400, friction: 10 }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 400, friction: 10 }).start();
+  };
+
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable style={style} onPressIn={press} onPressOut={release}>{children}</Pressable>
+      <Pressable 
+        style={style} 
+        onPressIn={handlePressIn} 
+        onPressOut={handlePressOut}
+        onPress={onPress} // El onPress se ejecuta por separado para no esperar a la animación
+      >
+        {children}
+      </Pressable>
     </Animated.View>
   );
 }
@@ -76,10 +91,24 @@ function FeaturedCard({
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const toggleFavAnimated = () => {
-    Animated.sequence([
-      Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, tension: 300, friction: 6 }),
-      Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, tension: 300, friction: 8 }),
-    ]).start(onToggleFav);
+    // 1. Cambio de estado instantáneo
+    onToggleFav();
+
+    // 2. Efecto de "Pop" explosivo e independiente
+    heartScale.setValue(1); 
+    Animated.spring(heartScale, {
+      toValue: 1.2,
+      useNativeDriver: true,
+      tension: 500, // Mucha más tensión para que sea rápido
+      friction: 8,
+    }).start(() => {
+      Animated.spring(heartScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 400,
+        friction: 10,
+      }).start();
+    });
   };
 
   return (
@@ -92,11 +121,15 @@ function FeaturedCard({
         }],
       },
     ]}>
-      {/* Botón favorito */}
+      {/* Botón favorito con Ionicons */}
       <Pressable style={fc.favBtn} onPress={toggleFavAnimated}>
-        <Animated.Text style={[fc.favIcon, isFav && fc.favActive, { transform: [{ scale: heartScale }] }]}>
-          {isFav ? '♥' : '♡'}
-        </Animated.Text>
+        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+          <Ionicons 
+            name={isFav ? "heart" : "heart-outline"} 
+            size={22} 
+            color={isFav ? "#E05252" : "#D0D0D0"} 
+          />
+        </Animated.View>
       </Pressable>
 
       <View style={fc.imgWrap}>
@@ -165,11 +198,23 @@ function ListCard({
   animValue: Animated.Value;
 }) {
   const heartScale = useRef(new Animated.Value(1)).current;
+
   const toggleFavAnimated = () => {
-    Animated.sequence([
-      Animated.spring(heartScale, { toValue: 1.5, useNativeDriver: true, tension: 300, friction: 5 }),
-      Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, tension: 300, friction: 8 }),
-    ]).start(onToggleFav);
+    onToggleFav();
+    heartScale.setValue(1);
+    Animated.spring(heartScale, {
+      toValue: 1.6,
+      useNativeDriver: true,
+      tension: 600,
+      friction: 7,
+    }).start(() => {
+      Animated.spring(heartScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 400,
+        friction: 10,
+      }).start();
+    });
   };
 
   return (
@@ -190,12 +235,16 @@ function ListCard({
       </View>
       <View style={lc.actions}>
         <Pressable onPress={toggleFavAnimated} style={lc.favBtn}>
-          <Animated.Text style={[lc.favIcon, isFav && lc.favActive, { transform: [{ scale: heartScale }] }]}>
-            {isFav ? '♥' : '♡'}
-          </Animated.Text>
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Ionicons 
+              name={isFav ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isFav ? "#E05252" : "#D0D0D0"} 
+            />
+          </Animated.View>
         </Pressable>
         <AnimatedButton style={lc.addBtn} onPress={onAdd} activeScale={0.88}>
-          <Text style={lc.addText}>+</Text>
+          <Ionicons name="add" size={20} color={C.white} />
         </AnimatedButton>
       </View>
     </Animated.View>
