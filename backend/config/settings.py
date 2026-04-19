@@ -3,6 +3,8 @@
 import os
 from decouple import config
 from pathlib import Path
+
+from adapters.persistence.repositories.mongo_timeslot_repository import seed_default_slots
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -10,6 +12,7 @@ ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = 'config.urls'
 STATIC_URL = 'static/'
 ADMIN_EMAILS = config('ADMIN_EMAILS', default='').split(',')
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',         
@@ -101,3 +104,6 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
+seed_default_slots()

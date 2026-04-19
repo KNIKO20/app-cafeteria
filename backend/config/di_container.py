@@ -8,6 +8,13 @@
 from adapters.persistence.repositories.mongo_order_repository import MongoOrderRepository
 from adapters.persistence.repositories.mongo_product_repository import MongoProductRepository
 from adapters.persistence.repositories.mongo_user_repository import MongoUserRepository
+from adapters.notifications.push_notification_service import ExpoPushNotificationService, NullNotificationService
+from adapters.persistence.repositories.mongo_cafeteria_settings_repository import MongoCafeteriaSettingsRepository
+from adapters.persistence.repositories.mongo_timeslot_repository import MongoTimeSlotRepository
+from core.application.use_cases.get_slots import GetSlotsUseCase
+from core.application.use_cases.toggle_cafeteria_status import ToggleCafeteriaStatusUseCase
+from core.application.use_cases.update_order_status import UpdateOrderStatusUseCase
+from core.application.use_cases.update_slot import UpdateSlotUseCase
 from config.db import get_database
 from tests.fakes.fake_order_repository import FakeOrderRepository
 from tests.fakes.fake_product_repository import FakeProductRepository
@@ -41,6 +48,22 @@ _product_repo = None
 _user_repo = None
 _auth_provider = None
 _is_demo_mode = False
+_cafeteria_settings_repo = MongoCafeteriaSettingsRepository()
+_timeslot_repo          = MongoTimeSlotRepository()
+# Servicio de notificaciones:
+#   - Si EXPO_PUSH_ENABLED=True en .env → usa ExpoPushNotificationService
+#   - Si no → usa NullNotificationService (solo logs, sin llamadas HTTP)
+_push_enabled = config("EXPO_PUSH_ENABLED", default=False, cast=bool)
+_notification_service = (
+    ExpoPushNotificationService()
+    if _push_enabled
+    else NullNotificationService()
+)
+def get_cafeteria_settings_repo() -> MongoCafeteriaSettingsRepository:
+    return _cafeteria_settings_repo
+ 
+def get_timeslot_repo() -> MongoTimeSlotRepository:
+    return _timeslot_repo
 
 def _initialize_repositories():
     global _order_repo, _product_repo, _user_repo, _is_demo_mode
@@ -82,6 +105,12 @@ _payment_gateway = StripePaymentGateway()
 _mock_payment_gateway = MockPaymentProvider()
 
 # Casos de uso (factories)
+def get_update_order_status_use_case() -> UpdateOrderStatusUseCase:
+    return UpdateOrderStatusUseCase(_order_repo, _notification_service)
+ 
+def get_confirm_orders_batch_use_case() -> UpdateOrderStatusUseCase:
+    return get_update_order_status_use_case()
+
 def get_order_repo() -> MongoOrderRepository:
     return _order_repo
 
@@ -89,7 +118,7 @@ def get_product_repo() -> MongoProductRepository:
     return _product_repo
 
 def get_create_order_use_case() -> CreateOrderUseCase:
-    return CreateOrderUseCase(_order_repo, _product_repo)
+    return CreateOrderUseCase(_order_repo, _product_repo, _cafeteria_settings_repo)
 
 def get_menu_use_case() -> GetMenuUseCase:
     return GetMenuUseCase(_product_repo)
@@ -136,3 +165,12 @@ def get_current_user_use_case():
     return GetCurrentUserUseCase(
         user_repo=get_user_repo()
     )
+
+def get_toggle_cafeteria_status_use_case() -> ToggleCafeteriaStatusUseCase:
+    return ToggleCafeteriaStatusUseCase(_cafeteria_settings_repo)
+
+def get_get_slots_use_case() -> GetSlotsUseCase:
+    return GetSlotsUseCase(_timeslot_repo)
+ 
+def get_update_slot_use_case() -> UpdateSlotUseCase:
+    return UpdateSlotUseCase(_timeslot_repo)

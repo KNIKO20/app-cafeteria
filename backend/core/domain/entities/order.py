@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from enum import Enum
 import uuid
-
 class OrderStatus(Enum):
     PENDING_PAYMENT = "pending_payment"   # Esperando pago
     PAID = "paid"                         # Pagado, en cola

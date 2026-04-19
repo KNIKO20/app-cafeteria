@@ -15,7 +15,8 @@ class MongoUserRepository(UserRepository):
             name=doc["name"],
             role=UserRole(doc["role"]),
             avatar_url=doc.get("avatar_url", ""),
-            is_active=doc.get("is_active", True)
+            is_active=doc.get("is_active", True),
+            push_token=doc.get("push_token")
         )
 
     def save(self, user: User) -> User:
@@ -25,7 +26,8 @@ class MongoUserRepository(UserRepository):
             "name": user.name,
             "role": user.role.value,
             "avatar_url": user.avatar_url,
-            "is_active": user.is_active
+            "is_active": user.is_active,
+            "push_token": user.push_token
         }
         # upsert=True actualizará si existe, o creará uno nuevo si no existe
         self.collection.update_one({"_id": user.id}, {"$set": user_dict}, upsert=True)
