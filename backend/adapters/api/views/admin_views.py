@@ -253,7 +253,7 @@ class SlotListView(APIView):
     GET /api/admin/slots/          → todas las franjas (para el panel admin)
     GET /api/admin/slots/?active=1 → solo las activas (para el alumno al pedir)
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [AllowAny]
  
     def get(self, request):
         active_only = request.query_params.get("active") == "1"

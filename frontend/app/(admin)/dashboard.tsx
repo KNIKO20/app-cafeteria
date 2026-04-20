@@ -9,6 +9,7 @@ import {
   getPendingOrders, updateOrderStatus,
   verifyPickupCode, toggleCafeteriaStatus,
   confirmOrdersBatch,
+  getCafeteriaStatus,
 } from '../../services/api';
 import { C, radius, shadow } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -178,11 +179,25 @@ const or = StyleSheet.create({
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [codeInput, setCodeInput] = useState('');
-  const [cafeteriaOpen, setCafeteriaOpen] = useState(true);
+  const [cafeteriaOpen, setCafeteriaOpen] = useState<boolean | null>(null);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [confirmingBatch, setConfirmingBatch] = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
+
+useEffect(() => {
+  const fetchStatus = async () => {
+    try {
+      const status = await getCafeteriaStatus();
+      setCafeteriaOpen(status);
+    } catch (error) {
+      console.error("Error obteniendo estado:", error);
+      setCafeteriaOpen(true); // fallback
+    }
+  };
+
+  fetchStatus();
+}, []);
 
   useEffect(() => {
     Animated.spring(headerAnim, { toValue: 1, useNativeDriver: true, tension: 50, friction: 12 }).start();
@@ -369,7 +384,7 @@ const handleToggle = async (value: boolean) => {
               {cafeteriaOpen ? 'ABIERTA' : 'CERRADA'}
             </Text>
             <Switch
-              value={cafeteriaOpen}
+              value={!!cafeteriaOpen}
               onValueChange={handleToggle}
               trackColor={{ false: '#f87171', true: '#4ade80' }}
               thumbColor={C.white}
