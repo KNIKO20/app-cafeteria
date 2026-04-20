@@ -2,7 +2,6 @@ import os
 import sys
 import uuid
 import django
-import random
 
 # Configuración de Django
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -231,8 +230,8 @@ def run():
             price=price,
             image_url=img_url,
             is_available=True,
-            stock=random.choice([None, 50, 100]), # Mezcla de stock ilimitado y limitado
-            preparation_minutes=random.choice([2, 5, 10]),
+            stock=100, # Valor fijo para consistencia
+            preparation_minutes=5,
             is_deleted=False
         )
         prod.save()
