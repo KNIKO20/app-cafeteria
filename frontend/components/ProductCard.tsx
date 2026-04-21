@@ -79,12 +79,18 @@ const favOut = () =>
       >
         {/* ── Zona de imagen ─────────────────────────────────── */}
         <View style={s.imageWrap}>
-          <Image
-            source={{ uri: imgUri }}
-            style={s.image}
-            resizeMode="cover"
-            onError={() => { if (imgUri !== fallbackUri) setImgUri(fallbackUri); }}
-          />
+          {imgUri ? (
+            <Image
+              source={{ uri: imgUri }}
+              style={s.image}
+              resizeMode="cover"
+              onError={() => setImgUri('')}
+            />
+          ) : (
+            <View style={[s.image, s.placeholderWrap]}>
+              <Ionicons name="image-outline" size={32} color={C.muted} />
+            </View>
+          )}
 
           {/* Badge de categoría */}
           {product.category && (
@@ -223,4 +229,9 @@ const s = StyleSheet.create({
     ...shadow.card,
   },
   addCircleDisabled: { backgroundColor: C.muted },
-});
+  placeholderWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.subtle,
+  },
+});

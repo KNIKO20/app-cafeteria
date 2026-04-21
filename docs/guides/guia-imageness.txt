@@ -1,0 +1,42 @@
+1. Obtén la URL de la imagen
+Asegúrate de tener una URL directa a la imagen que quieras usar (puede ser una imagen subida a un servidor propio, a un servicio de hosting como Imgur, Cloudinary, o incluso una URL de Unsplash si deseas elegir una específica).
+
+2. Identifica el Producto en la Base de Datos
+Accede a tu base de datos MongoDB (donde se guardan los productos).
+
+Si usas Compass o una herramienta similar: Busca la colección products.
+Si lo haces por código: Necesitarás el product_id (por ejemplo: prod_a1b2c3d4).
+3. Actualiza el campo image_url
+Tienes varias formas de hacerlo:
+
+Opción A: Directamente en la Base de Datos (Recomendado para pruebas)
+Busca el documento del producto y edita el campo image_url pegando la URL de tu imagen.
+
+json
+{
+  "product_id": "prod_123456",
+  "name": "Bocadillo de Jamón",
+  "image_url": "https://tusitio.com/fotos/jamon.jpg",
+  ...
+}
+Opción B: Mediante un script de actualización rápida
+Puedes crear un script pequeño en la carpeta backend (similar a los que borramos, pero solo con lo que necesitas):
+
+python
+# backend/update_manual_image.py
+from adapters.persistence.models.product_model import ProductDocument
+# Busca el producto por nombre o ID y actualiza
+prod = ProductDocument.objects(name="Bocadillo de Jamón y Queso").first()
+if prod:
+    prod.image_url = "URL_DE_TU_IMAGEN_AQUI"
+    prod.save()
+    print("Imagen actualizada correctamente")
+Opción C: A través de la API (si tienes el endpoint de actualización)
+Si usas el caso de uso UpdateProductUseCase, envía un PATCH o PUT al endpoint del producto con el campo image_url.
+
+4. Verifica el cambio en la App
+Una vez actualizado el campo en la base de datos:
+
+Abre la aplicación frontend.
+El componente ProductCard detectará que image_url ya no está vacío.
+En lugar de mostrar el icono de marcador de posición (la cajita gris con el icono de imagen), descargará y mostrará automáticamente tu nueva imagen.
