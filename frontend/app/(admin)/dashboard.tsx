@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity,
   StyleSheet, TextInput, Alert, Switch, ScrollView, Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -14,6 +15,7 @@ import {
 import { C, radius, shadow } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import ActionModal from '../../components/ActionModal';
+import { useAuthStore } from '../../stores/authStore';
 
 interface OrderItem { product_id: string; name: string; qty: number; }
 interface Order {
@@ -184,32 +186,55 @@ export default function AdminDashboard() {
   const [confirmingBatch, setConfirmingBatch] = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
-
+  const { token, isHydrated, user } = useAuthStore();
+  
 useEffect(() => {
   const fetchStatus = async () => {
+    // Si no está hidratado o no hay token, no hacemos nada
     try {
       const status = await getCafeteriaStatus();
       setCafeteriaOpen(status);
-    } catch (error) {
-      console.error("Error obteniendo estado:", error);
-      setCafeteriaOpen(true); // fallback
+    } catch (error: any) {
+      console.error("Error en fetchStatus:", error);
+    if (error.response?.status === 403) {
+        return;
+      }
+      setCafeteriaOpen(false);
     }
   };
 
   fetchStatus();
-}, []);
+}, [isHydrated, token]); // El efecto se re-disparará cuando isHydrated pase a true
 
-  useEffect(() => {
-    Animated.spring(headerAnim, { toValue: 1, useNativeDriver: true, tension: 50, friction: 12 }).start();
-    loadOrders();
-    const interval = setInterval(loadOrders, 30_000);
-    return () => clearInterval(interval);
-  }, []);
+const loadOrders = async () => {
+  if (!isHydrated || !token) return; 
 
-  const loadOrders = async () => {
+  try {
     const data = await getPendingOrders();
     setOrders(data);
-  };
+  } catch (error: any) {
+    console.error("Error cargando pedidos:", error);
+  }
+};
+useEffect(() => {
+  Animated.spring(headerAnim, { 
+    toValue: 1, 
+    useNativeDriver: true, 
+    tension: 50, 
+    friction: 12 
+  }).start();
+
+  // El intervalo funcionará cada 30 segundos
+  const interval = setInterval(() => {
+    loadOrders();
+  }, 30_000);
+
+  return () => clearInterval(interval);
+}, [isHydrated, token]); // Añadimos dependencias para que el intervalo use el token actual
+
+useEffect(() => {
+  loadOrders();
+}, [isHydrated, token]); 
 
   const countPaid = orders.filter(o => o.status === 'paid').length;
   const countPreparing = orders.filter(o => o.status === 'preparing').length;
@@ -383,14 +408,16 @@ const handleToggle = async (value: boolean) => {
             <Text style={[s.statusText, { color: cafeteriaOpen ? '#4ade80' : '#f87171' }]}>
               {cafeteriaOpen ? 'ABIERTA' : 'CERRADA'}
             </Text>
-            <Switch
+            {cafeteriaOpen === null ? (
+                <ActivityIndicator size="small" />
+              ) :(<Switch
               value={!!cafeteriaOpen}
               onValueChange={handleToggle}
               trackColor={{ false: '#f87171', true: '#4ade80' }}
               thumbColor={C.white}
               disabled={togglingStatus}
               style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-            />
+            />)}
           </View>
 
           <TouchableOpacity

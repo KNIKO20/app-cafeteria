@@ -1,8 +1,8 @@
 
-import { useRouter, useSegments, usePathname } from 'expo-router';
+import { useRouter, useSegments, usePathname, Slot } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Pressable, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCartStore } from '../stores/cartStore';
@@ -326,22 +326,48 @@ const d = StyleSheet.create({
 
 // ── Layout principal ─────────────────────────────────────────────────
 export default function Layout() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
-  const user    = useAuthStore((s) => s.user);
-  const segments = useSegments();
-  const router  = useRouter();
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => { setIsReady(true); }, []);
-
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const user = useAuthStore((s) => s.user);
+  const { isHydrated, hydrate, token } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
   useEffect(() => {
-    if (!isReady) return;
+      // Si por alguna razón el middleware no cambia el estado en 2 segundos,
+      // forzamos la hidratación para no bloquear al usuario.
+      const timeout = setTimeout(() => {
+        if (!isHydrated) {
+          hydrate(); 
+        }
+      }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [isHydrated]);
+  useEffect(() => {
+    hydrate()
+    // 2. CRÍTICO: Si Zustand no ha terminado de cargar, no hagas nada
+    if (!isHydrated) return;
+
     const inAuth = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuth)
-      setTimeout(() => router.replace('/(auth)/login'), 1);
-    else if (isAuthenticated && inAuth)
-      setTimeout(() => router.replace(user?.is_admin ? '/(admin)/dashboard' : '/(student)'), 1);
-  }, [isAuthenticated, segments, isReady]);
+
+    if (!isAuthenticated && !inAuth) {
+      // Usamos replace directo, el isHydrated ya nos da la seguridad
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuth) {
+      router.replace(user?.is_admin ? '/(admin)/dashboard' : '/(student)');
+    }
+  }, [isAuthenticated, segments, isHydrated]); // 3. Añadimos isHydrated aquí
+
+  // 4. MIENTRAS no esté hidratado, mostramos una pantalla de carga
+  // Esto evita que el Drawer o el Stack se monten "vacíos"
+  if (!isHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.dark }}>
+        <ActivityIndicator size="large" color={C.white} />
+      </View>
+    );
+  }
 
   const headerOpts = {
     headerStyle:      { backgroundColor: C.dark },
