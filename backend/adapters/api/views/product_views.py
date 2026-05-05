@@ -8,12 +8,14 @@ from config.di_container import get_menu_use_case
 class ProductListView(APIView):
     permission_classes = [IsAuthenticatedHex]
 
+#Se filtra por categoria automaticamente
+#Antes se usaba data.get ahora query_params.get
     def get(self, request):
         try:
             category_param = request.query_params.get("category")
             
             repo = get_menu_use_case()
-            products = repo.execute(category_param)
+            products = repo.execute(request.query_params.get("category"))
             return Response([{
                 "id": p.id,
                 "name": p.name,
@@ -26,6 +28,7 @@ class ProductListView(APIView):
                 "stock": p.stock
             } for p in products], status=200)
         except ValueError as e:
+            print(e)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:

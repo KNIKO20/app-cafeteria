@@ -1,18 +1,23 @@
 # La entidad Product representa un producto de la cafetería.
 # Esto permite que la lógica de negocio sea independiente de la tecnología.
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 from enum import Enum
 
 from core.domain.exceptions.domain_exceptions import InsufficientStockException
 
 class ProductCategory(Enum):
-    BOCADILLO = "bocadillo"
+    BOCADILLO_CALIENTE = "bocadillo_caliente"
+    BOCADILLO_FRIO = "bocadillo_frio"
+    BOCADILLO_ESPECIAL = "bocadillo_especial"
+    SANDWICH = "sandwich"
     BEBIDA = "bebida"
-    POSTRE = "postre"
+    CAFETERIA = "cafeteria"
+    BOLLERIA = "bolleria"
+    SNACK = "snack"
     MENU = "menu"
-    SALUDABLE = "saludable"
+    SUPLEMENTO = "suplemento"
 
 @dataclass # sirve para que implicitamente cree el __init__ y el __repr__(toString)
 class Product:
@@ -27,7 +32,7 @@ class Product:
     #puede ser null/None o int
     preparation_minutes: int = 5        # Tiempo estimado de preparación
     is_deleted: bool = False
-    
+    allergens: List[str] = field(default_factory=list)
     # debe devolver un bool
     def is_in_stock(self) -> bool:
         """Un producto está en stock si no está borrado, está activo y hay unidades"""

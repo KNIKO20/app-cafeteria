@@ -7,12 +7,12 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from adapters.auth.permissions import IsAuthenticatedHex
+from core.domain.exceptions.setting_exceptions import CafeteriaClosedError
 from core.application.use_cases.create_order import CreateOrderInput
 from config.di_container import get_create_order_use_case, get_process_payment_use_case
 
 
 class CreateOrderView(APIView):
-    # ¡ACTIVAMOS LA AUTENTICACIÓN! Solo usuarios con JWT pueden crear pedidos
     permission_classes = [IsAuthenticatedHex]
 
     def post(self, request):
@@ -35,7 +35,9 @@ class CreateOrderView(APIView):
                 "total": result.total,
                 "status": result.status
             }, status=status.HTTP_201_CREATED)
-
+        except CafeteriaClosedError as e:
+            # Error de negocio: 403 es ideal porque el acceso al recurso está prohibido ahora
+            return Response({"error": str(e), "code": "CAFETERIA_CLOSED"}, status=status.HTTP_403_FORBIDDEN)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:

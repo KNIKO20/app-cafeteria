@@ -11,7 +11,7 @@ class TimeSlot:
     end_time: time            # Ej: time(11, 0)  → 11:00
     max_orders: int = 20      # Máximo de pedidos en esta franja
     current_orders: int = 0
-    is_open: bool = True
+    is_active: bool = True
     
     @property
     def label(self) -> str:
@@ -19,7 +19,7 @@ class TimeSlot:
     
     def has_capacity(self) -> bool:
         """¿Puede aceptar más pedidos?"""
-        return self.is_open and self.current_orders < self.max_orders
+        return self.is_active and self.current_orders < self.max_orders
     
     def reserve_slot(self):
         """Reserva una plaza en esta franja"""
@@ -29,4 +29,4 @@ class TimeSlot:
     
     def close(self):
         """El personal cierra esta franja"""
-        self.is_open = False
+        self.is_active = False

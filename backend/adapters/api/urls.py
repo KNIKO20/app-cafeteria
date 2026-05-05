@@ -8,6 +8,9 @@ from adapters.api.views.product_views import ProductListView
 from adapters.api.views.admin_views import (
     ProductManagementView, 
     ProductDetailAdminView,
+    SlotListView,
+    SlotUpdateView,
+    ToggleCafeteriaStatusView,
     UpdateInventoryView,
     PendingOrdersView,
     UpdateOrderStatusView,
@@ -43,4 +46,7 @@ urlpatterns = [
     # Rutas de Autenticación
     path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
     path('auth/me/', MeView.as_view(), name='auth-me'),
+    path("admin/cafeteria/status/", ToggleCafeteriaStatusView.as_view(), name="cafeteria-status"),
+    path("admin/slots/", SlotListView.as_view(), name="admin-slots"),
+    path("admin/slots/<str:slot_id>/",SlotUpdateView.as_view(), name="admin-slot-update"),
 ]

@@ -72,6 +72,8 @@ export const confirmOrdersBatch = (orderIds: string[]) =>
 export const toggleCafeteriaStatus = (open: boolean) =>
   api.post('/admin/cafeteria/status/', { is_open: open }).then(r => r.data);
 
+export const getCafeteriaStatus = ()=>
+  api.get('/admin/cafeteria/status/').then(r=>r.data);
 // ── Admin: Franjas Horarias (TimeSlots) ───────────────────────────────
 /**
  * Devuelve todas las franjas horarias configuradas.

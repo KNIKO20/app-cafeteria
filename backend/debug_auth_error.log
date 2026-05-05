@@ -1,0 +1,111 @@
+
+[2026-04-14 09:59:35.728507] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\adapters\api\views\auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\core\application\use_cases\login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-14 10:00:58.903791] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\adapters\api\views\auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\core\application\use_cases\login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-14 10:02:41.139599] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\adapters\api\views\auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\core\application\use_cases\login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-14 18:21:10.371594] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\adapters\api\views\auth_views.py", line 23, in post
+    use_case = get_login_with_google_use_case()
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\config\di_container.py", line 130, in get_login_with_google_use_case
+    auth_provider=get_auth_provider(),
+                  ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\config\di_container.py", line 123, in get_auth_provider
+    if _auth_provider is None:
+       ^^^^^^^^^^^^^^
+NameError: name '_auth_provider' is not defined. Did you mean: 'get_auth_provider'?
+
+
+[2026-04-14 18:21:23.056892] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\adapters\api\views\auth_views.py", line 23, in post
+    use_case = get_login_with_google_use_case()
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\config\di_container.py", line 130, in get_login_with_google_use_case
+    auth_provider=get_auth_provider(),
+                  ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\engel\API-Cafeteria\app-cafeteria\backend\config\di_container.py", line 123, in get_auth_provider
+    if _auth_provider is None:
+       ^^^^^^^^^^^^^^
+NameError: name '_auth_provider' is not defined. Did you mean: 'get_auth_provider'?
+
+
+[2026-04-20 10:40:40.176445] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "/workspaces/app-cafeteria/backend/adapters/api/views/auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/app-cafeteria/backend/core/application/use_cases/login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-20 10:41:10.344941] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "/workspaces/app-cafeteria/backend/adapters/api/views/auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/app-cafeteria/backend/core/application/use_cases/login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-20 10:43:19.334885] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "/workspaces/app-cafeteria/backend/adapters/api/views/auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/app-cafeteria/backend/core/application/use_cases/login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-20 10:45:04.162663] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "/workspaces/app-cafeteria/backend/adapters/api/views/auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/app-cafeteria/backend/core/application/use_cases/login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+
+
+[2026-04-20 10:47:39.659533] ERROR IN GOOGLE LOGIN:
+Traceback (most recent call last):
+  File "/workspaces/app-cafeteria/backend/adapters/api/views/auth_views.py", line 25, in post
+    access_token = use_case.execute(token)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/app-cafeteria/backend/core/application/use_cases/login_with_google.py", line 65, in execute
+    jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+                ^^^^^^^^^^
+AttributeError: module 'jwt' has no attribute 'encode'
+

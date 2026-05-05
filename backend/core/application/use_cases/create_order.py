@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import List
 from datetime import datetime
 
+from core.domain.exceptions.setting_exceptions import CafeteriaClosedError
+from core.domain.ports.cafeteria_settings_repository import CafeteriaSettingsRepository
 from core.domain.entities.order import Order, OrderItem
 from core.domain.ports.order_repository import OrderRepository
 from core.domain.ports.product_repository import ProductRepository
@@ -46,11 +48,17 @@ class CreateOrderUseCase:
         self,
         order_repo: OrderRepository,         # Puerto → inyectado
         product_repo: ProductRepository,     # Puerto → inyectado
+        settings_repo: CafeteriaSettingsRepository
     ):
         self.order_repo = order_repo
         self.product_repo = product_repo
+        self.settings_repo = settings_repo
     
     def execute(self, input_data: CreateOrderInput) -> CreateOrderOutput:
+        # validar que la cafeteria este abierta
+        config = self.settings_repo.get()
+        if not config.can_accept_orders():
+            raise CafeteriaClosedError("No se pueden realizar pedidos ahora.")
         # 1. Validar que los productos existen y están disponibles
         order_items = []
         for item_data in input_data.items:

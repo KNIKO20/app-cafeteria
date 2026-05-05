@@ -13,9 +13,11 @@ class UpdateProductInput:
     name: Optional[str] = None
     price: Optional[float] = None
     category: Optional[str] = None
+    is_available: Optional[bool] = True
     description: Optional[str] = None
     image_url: Optional[str] = None
     preparation_minutes: Optional[int] = None
+    stock: Optional[int] = None  
 
 @dataclass
 class UpdateProductOutput:
@@ -57,7 +59,9 @@ class UpdateProductUseCase:
                 
             if input_data.preparation_minutes is not None:
                 product.preparation_minutes = input_data.preparation_minutes
-
+                
+            if input_data.stock is not None:
+                product.stock = input_data.stock
             # 3. Guardamos los cambios (los campos no mencionados quedaron igual)
             self.product_repo.save(product)
             

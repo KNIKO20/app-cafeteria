@@ -1,9 +1,114 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { useCartStore } from '../../stores/cartStore';
 import { createOrder } from '../../services/api';
 import TimeslotPicker from '../../components/TimeslotPicker';
+import { Ionicons } from '@expo/vector-icons';
+
+const C = {
+  dark:   '#1A3329',
+  mid:    '#00704A',
+  accent: '#CBA258',
+  light:  '#D4E9E2',
+  white:  '#FFFFFF',
+  bg:     '#F7F4EF',
+  muted:  '#8BA99A',
+  shadow: '#0D2018',
+  subtle: '#E8F0EC',
+};
+
+// ── Ítem de carrito animado ──────────────────────────────────────────
+function CartItem({
+  item, onInc, onDec, index,
+}: {
+  item: { product_id: string; product_name: string; price: number; quantity: number };
+  onInc: () => void; onDec: () => void; index: number;
+}) {
+  const enterAnim = useRef(new Animated.Value(0)).current;
+  const qtyScale  = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(enterAnim, {
+      toValue: 1, useNativeDriver: true,
+      tension: 65, friction: 11, delay: index * 40, // Un poco más rápido al entrar
+    }).start();
+  }, []);
+
+  // Animación tipo "Pop" rápida
+  const animateQty = (callback: () => void) => {
+    // 1. Ejecutamos el cambio de estado inmediatamente para que el UI responda ya
+    callback(); 
+
+    // 2. Reiniciamos y disparamos la animación en paralelo
+    qtyScale.setValue(1); 
+    Animated.spring(qtyScale, {
+      toValue: 1.4,
+      useNativeDriver: true,
+      tension: 600, // Tensión muy alta para velocidad
+      friction: 10,
+    }).start(() => {
+      Animated.spring(qtyScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 400,
+        friction: 10,
+      }).start();
+    });
+  };
+
+  return (
+    <Animated.View style={[
+      s.item,
+      {
+        opacity: enterAnim,
+        transform: [{ 
+          translateX: enterAnim.interpolate({ 
+            inputRange: [0, 1], 
+            outputRange: [-20, 0] 
+          }) 
+        }],
+      },
+    ]}>
+      {/* Icono con inicial */}
+      <View style={s.itemIcon}>
+        <Text style={s.itemIconText}>{item.product_name[0].toUpperCase()}</Text>
+      </View>
+
+      <View style={s.itemInfo}>
+        <Text style={s.itemName} numberOfLines={1}>{item.product_name}</Text>
+        <Text style={s.itemUnit}>{item.price.toFixed(2)} €/ud</Text>
+      </View>
+
+      <View style={s.itemControls}>
+        <Pressable
+          style={({ pressed }) => [s.qtyBtn, pressed && { opacity: 0.6 }]}
+          onPress={() => animateQty(onDec)}
+        >
+          <Ionicons name="remove-circle-outline" size={26} color={C.muted} />
+        </Pressable>
+
+        <View style={s.qtyContainer}>
+          <Animated.Text style={[s.qty, { transform: [{ scale: qtyScale }] }]}>
+            {item.quantity}
+          </Animated.Text>
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [s.qtyBtn, pressed && { opacity: 0.6 }]}
+          onPress={() => animateQty(onInc)}
+        >
+          <Ionicons name="add-circle" size={26} color={C.mid} />
+        </Pressable>
+
+        <View style={s.totalContainer}>
+           <Text style={s.itemTotal}>{(item.price * item.quantity).toFixed(2)}€</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
 
 export default function CartScreen() {
   const { items, updateQuantity, removeItem, clearCart, total } = useCartStore();
@@ -11,7 +116,17 @@ export default function CartScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ── Validaciones antes de pagar ──────────────────────────────────
+  // Animaciones generales
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const footerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(footerAnim, { toValue: 1, duration: 400, delay: 200, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const handleOrder = async () => {
     if (items.length === 0) {
       Alert.alert('Carrito vacío', 'Añade al menos un producto antes de continuar.');
@@ -33,16 +148,10 @@ export default function CartScreen() {
         pickup_timeslot_id: selectedSlot,
         pickup_date: selectedDate,
       });
-
       clearCart();
-
-      // Navegación a pago con orderId y total
       router.push({
-        pathname: '/payment',
-        params: {
-          orderId: result.order_id,
-          total: String(result.total),
-        },
+        pathname: '/(student)/payment',
+        params: { orderId: result.order_id, total: String(result.total) },
       });
     } catch (error: any) {
       const msg = error.response?.data?.error || 'No se pudo crear el pedido. Inténtalo de nuevo.';
@@ -52,119 +161,168 @@ export default function CartScreen() {
     }
   };
 
+  // Estado vacío
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>🛒</Text>
-        <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
-        <Text style={styles.emptySubtitle}>Añade productos desde el menú</Text>
-        <TouchableOpacity style={styles.goMenuBtn} onPress={() => router.push('/')}>
-          <Text style={styles.goMenuText}>Ver menú</Text>
-        </TouchableOpacity>
+      <View style={s.empty}>
+        <View style={s.emptyIcon}><Text style={s.emptyIconGlyph}>⊡</Text></View>
+        <Text style={s.emptyTitle}>Tu carrito está vacío</Text>
+        <Text style={s.emptySub}>Añade productos desde el menú para comenzar tu pedido</Text>
+        <Pressable style={s.goMenuBtn} onPress={() => router.push('/(student)/index')}>
+          <Text style={s.goMenuText}>Ver menú</Text>
+        </Pressable>
       </View>
     );
   }
 
+  const canOrder = !loading && !!selectedSlot && !!selectedDate;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tu pedido</Text>
+    <View style={s.container}>
+      {/* Header */}
+      <Animated.View style={[s.header, {
+        opacity: headerAnim,
+        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }],
+      }]}>
+        <Text style={s.headerLabel}>MI PEDIDO</Text>
+        <Text style={s.headerTitle}>Carrito</Text>
+        <View style={s.headerBadge}>
+          <Text style={s.headerBadgeText}>{items.length} producto{items.length !== 1 ? 's' : ''}</Text>
+        </View>
+      </Animated.View>
 
       <FlatList
         data={items}
         keyExtractor={i => i.product_id}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.product_name}</Text>
-              <Text style={styles.itemUnitPrice}>{item.price.toFixed(2)}€ / ud</Text>
-            </View>
-            <View style={styles.itemControls}>
-              <TouchableOpacity
-                style={styles.qtyBtnWrap}
-                onPress={() => updateQuantity(item.product_id, item.quantity - 1)}
-              >
-                <Text style={styles.qtyBtn}>−</Text>
-              </TouchableOpacity>
-              <Text style={styles.qty}>{item.quantity}</Text>
-              <TouchableOpacity
-                style={styles.qtyBtnWrap}
-                onPress={() => updateQuantity(item.product_id, item.quantity + 1)}
-              >
-                <Text style={styles.qtyBtn}>+</Text>
-              </TouchableOpacity>
-              <Text style={styles.itemPrice}>{(item.price * item.quantity).toFixed(2)}€</Text>
-            </View>
-          </View>
+        renderItem={({ item, index }) => (
+          <CartItem
+            item={item} index={index}
+            onInc={() => updateQuantity(item.product_id, item.quantity + 1)}
+            onDec={() => updateQuantity(item.product_id, item.quantity - 1)}
+          />
         )}
         ListFooterComponent={
-          /* Selector de franja horaria */
           <TimeslotPicker
             onSelect={(slotId, date) => { setSelectedSlot(slotId); setSelectedDate(date); }}
           />
         }
+        contentContainerStyle={s.listContent}
+        showsVerticalScrollIndicator={false}
       />
 
-      {/* Footer: total + botón */}
-      <View style={styles.footer}>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalAmount}>{total().toFixed(2)}€</Text>
+      {/* Footer */}
+      <Animated.View style={[s.footer, {
+        opacity: footerAnim,
+        transform: [{ translateY: footerAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+      }]}>
+        <View style={s.totalRow}>
+          <Text style={s.totalLabel}>Total del pedido</Text>
+          <Text style={s.totalAmount}>{total().toFixed(2)} €</Text>
         </View>
 
         {selectedSlot && (
-          <View style={styles.slotConfirm}>
-            <Text style={styles.slotConfirmText}>✅ Recogida seleccionada</Text>
+          <View style={s.slotConfirm}>
+            <View style={s.slotDot} />
+            <Text style={s.slotText}>Franja horaria seleccionada</Text>
           </View>
         )}
 
-        <TouchableOpacity
-          style={[styles.orderBtn, (loading || !selectedSlot) && styles.orderBtnDisabled]}
+        <Pressable
+          style={[s.orderBtn, !canOrder && s.orderBtnOff]}
           onPress={handleOrder}
-          disabled={loading || !selectedSlot}
+          disabled={!canOrder}
         >
-          <Text style={styles.orderBtnText}>
+          <Text style={s.orderBtnText}>
             {loading ? 'Procesando...' : 'Continuar al pago →'}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </Pressable>
+
+        {!selectedSlot && (
+          <Text style={s.hintText}>Selecciona una franja horaria para continuar</Text>
+        )}
+      </Animated.View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
-  emptyEmoji: { fontSize: 60 },
-  emptyTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a2e' },
-  emptySubtitle: { fontSize: 15, color: '#aaa' },
-  goMenuBtn: { marginTop: 8, backgroundColor: '#FF6B35', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12 },
-  goMenuText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
-  item: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+const s = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: C.bg },
+  header:       { backgroundColor: C.dark, paddingTop: 20, paddingBottom: 24, paddingHorizontal: 20 },
+  headerLabel:  { fontSize: 10, fontWeight: '800', color: C.muted, letterSpacing: 2, marginBottom: 4 },
+  headerTitle:  { fontSize: 28, fontWeight: '900', color: C.white, letterSpacing: -0.5 },
+  headerBadge:  {
+    marginTop: 8, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 4,
   },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 15, fontWeight: '600', color: '#333' },
-  itemUnitPrice: { fontSize: 12, color: '#aaa', marginTop: 2 },
+  headerBadgeText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
+  listContent:  { padding: 16, paddingBottom: 20 },
+
+  item:         {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.white, borderRadius: 16, marginBottom: 10, padding: 14,
+    shadowColor: '#0D2018', shadowOpacity: 0.05,
+    shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+  },
+  itemIcon:     {
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center', marginRight: 12,
+  },
+  itemIconText: { fontSize: 18, fontWeight: '800', color: C.mid },
+  itemInfo:     { flex: 1, marginRight: 8 },
+  itemName:     { fontSize: 15, fontWeight: '700', color: C.dark, letterSpacing: 0.1 },
+  itemUnit:     { fontSize: 12, color: C.muted, marginTop: 3 },
   itemControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  qtyBtnWrap: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#FFF0EB', alignItems: 'center', justifyContent: 'center',
+  qtyBtn:       {
+    width: 30, height: 30, borderRadius: 10,
+    backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: C.light,
   },
-  qtyBtn: { fontSize: 18, color: '#FF6B35', fontWeight: '700', lineHeight: 20 },
-  qty: { fontSize: 16, fontWeight: '600', minWidth: 24, textAlign: 'center', color: '#1a1a2e' },
-  itemPrice: { fontSize: 15, fontWeight: '700', color: '#333', minWidth: 56, textAlign: 'right' },
-  footer: { paddingTop: 16, gap: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  totalLabel: { fontSize: 16, color: '#666', fontWeight: '600' },
-  totalAmount: { fontSize: 26, fontWeight: '900', color: '#FF6B35' },
-  slotConfirm: {
-    backgroundColor: '#f0fdf4', borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: '#bbf7d0',
+  qtyBtnAdd:    { backgroundColor: C.mid, borderColor: C.mid },
+  qtyBtnText:   { fontSize: 18, color: C.dark, fontWeight: '700', lineHeight: 20 },
+  qtyBtnAddText:{ color: C.white },
+  qty:          { fontSize: 16, fontWeight: '800', minWidth: 26, textAlign: 'center', color: C.dark },
+  itemTotal:    { fontSize: 14, fontWeight: '800', color: C.dark, minWidth: 56, textAlign: 'right' },
+
+  footer:       {
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 28,
+    backgroundColor: C.white, gap: 12,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    shadowColor: C.shadow, shadowOpacity: 0.10,
+    shadowRadius: 20, shadowOffset: { width: 0, height: -6 }, elevation: 10,
   },
-  slotConfirmText: { color: '#166534', fontWeight: '600', fontSize: 14, textAlign: 'center' },
-  orderBtn: { backgroundColor: '#FF6B35', padding: 16, borderRadius: 14, alignItems: 'center' },
-  orderBtnDisabled: { opacity: 0.45 },
-  orderBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  totalRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  totalLabel:   { fontSize: 14, color: C.muted, fontWeight: '600' },
+  totalAmount:  { fontSize: 30, fontWeight: '900', color: C.dark, letterSpacing: -0.5 },
+  slotConfirm:  {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: C.subtle, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: C.light,
+  },
+  slotDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: C.mid },
+  slotText:     { color: C.mid, fontWeight: '700', fontSize: 13 },
+  orderBtn:     {
+    backgroundColor: C.mid, padding: 17, borderRadius: 16, alignItems: 'center',
+    shadowColor: C.mid, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
+  },
+  orderBtnOff:  { opacity: 0.40, shadowOpacity: 0 },
+  orderBtnText: { color: C.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  hintText:     { fontSize: 12, color: C.muted, textAlign: 'center', fontWeight: '500' },
+
+  empty:        { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 40, backgroundColor: C.bg },
+  emptyIcon:    {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  emptyIconGlyph: { fontSize: 40, color: C.mid },
+  emptyTitle:   { fontSize: 22, fontWeight: '900', color: C.dark, letterSpacing: -0.3 },
+  emptySub:     { fontSize: 14, color: C.muted, textAlign: 'center', lineHeight: 21 },
+  goMenuBtn:    {
+    marginTop: 4, backgroundColor: C.mid,
+    paddingHorizontal: 32, paddingVertical: 15, borderRadius: 14,
+    shadowColor: C.mid, shadowOpacity: 0.30, shadowRadius: 8, elevation: 5,
+  },
+  totalContainer: { marginLeft: 10, minWidth: 65, alignItems: 'flex-end' },
+  qtyContainer: { width: 30, alignItems: 'center' },
+  goMenuText:   { color: C.white, fontWeight: '800', fontSize: 15 },
 });

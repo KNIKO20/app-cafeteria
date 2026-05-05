@@ -1,261 +1,551 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, TextInput, Alert, Switch,
+  View, Text, TouchableOpacity,
+  StyleSheet, TextInput, Alert, Switch, ScrollView, Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
   getPendingOrders, updateOrderStatus,
   verifyPickupCode, toggleCafeteriaStatus,
   confirmOrdersBatch,
+  getCafeteriaStatus,
 } from '../../services/api';
+import { C, radius, shadow } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
+import ActionModal from '../../components/ActionModal';
+import { useAuthStore } from '../../stores/authStore';
 
 interface OrderItem { product_id: string; name: string; qty: number; }
 interface Order {
-  id: string; pickup_code: string;
-  pickup_timeslot: string; status: string; items: OrderItem[];
+  id: string;
+  pickup_code: string;
+  pickup_timeslot: string;
+  status: string;
+  items: OrderItem[];
 }
 
-export default function AdminDashboard() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [codeInput, setCodeInput] = useState('');
-  const [cafeteriaOpen, setCafeteriaOpen] = useState(true);
-  const [togglingStatus, setTogglingStatus] = useState(false);
-  const [confirmingBatch, setConfirmingBatch] = useState(false);
-
+// ── Tarjeta de estadística ───────────────────────────────────────────
+function StatCard({
+  label, value, color, index,
+}: {
+  label: string; value: number; color: string; index: number;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    loadOrders();
-    const interval = setInterval(loadOrders, 30000);
-    return () => clearInterval(interval);
+    Animated.spring(anim, {
+      toValue: 1, useNativeDriver: true,
+      tension: 60, friction: 12, delay: index * 80,
+    }).start();
   }, []);
+  return (
+    <Animated.View style={[sc.card, {
+      opacity: anim,
+      transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+    }]}>
+      <View style={[sc.dot, { backgroundColor: color }]} />
+      <Text style={sc.value}>{value}</Text>
+      <Text style={sc.label}>{label}</Text>
+    </Animated.View>
+  );
+}
 
-  const loadOrders = async () => {
-    const data = await getPendingOrders();
-    setOrders(data);
-  };
+const sc = StyleSheet.create({
+  card: {
+    flex: 1, backgroundColor: C.white, borderRadius: radius.md,
+    padding: 14, alignItems: 'center', gap: 4, ...shadow.card,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4, marginBottom: 2 },
+  value: { fontSize: 26, fontWeight: '900', color: C.dark, letterSpacing: -1 },
+  label: { fontSize: 10, fontWeight: '700', color: C.muted, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' },
+});
 
-  // ── Verificar código de recogida ──────────────────────────────────
-  const handleVerifyCode = async () => {
-    if (!codeInput.trim()) return;
-    const result = await verifyPickupCode(codeInput.trim());
-    if (result.valid) {
-      Alert.alert(
-        '✅ Pedido válido',
-        `${result.items.map((i: OrderItem) => `${i.qty}x ${i.name}`).join('\n')}\nTotal: ${result.total}€\n${result.is_paid ? '✅ Pagado' : '❌ No pagado'}`
-      );
-    } else {
-      Alert.alert('❌ Código no encontrado');
-    }
-    setCodeInput('');
-  };
-
-  // ── Abrir / Cerrar cafetería ───────────────────────────────────────
-  const handleToggleCafeteria = async (value: boolean) => {
-    Alert.alert(
-      value ? 'Abrir cafetería' : 'Cerrar pedidos',
-      value
-        ? '¿Deseas abrir la cafetería para nuevos pedidos?'
-        : '¿Seguro que quieres cerrar los pedidos? Los alumnos no podrán hacer nuevos pedidos.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          style: value ? 'default' : 'destructive',
-          onPress: async () => {
-            setTogglingStatus(true);
-            try {
-              await toggleCafeteriaStatus(value);
-              setCafeteriaOpen(value);
-            } catch {
-              Alert.alert('Error', 'No se pudo cambiar el estado de la cafetería.');
-            } finally {
-              setTogglingStatus(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  // ── Confirmación masiva ───────────────────────────────────────────
-  const handleConfirmBatch = async () => {
-    const preparingIds = orders.filter(o => o.status === 'preparing').map(o => o.id);
-    if (preparingIds.length === 0) {
-      Alert.alert('Sin pedidos', 'No hay pedidos en preparación para confirmar.');
-      return;
-    }
-    Alert.alert(
-      'Confirmar pedidos',
-      `¿Marcar ${preparingIds.length} pedido(s) como listos?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: `Confirmar ${preparingIds.length}`,
-          onPress: async () => {
-            setConfirmingBatch(true);
-            try {
-              await confirmOrdersBatch(preparingIds);
-              loadOrders();
-            } catch {
-              Alert.alert('Error', 'No se pudo confirmar los pedidos.');
-            } finally {
-              setConfirmingBatch(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+// ── Botón de acción rápida ───────────────────────────────────────────
+function QuickAction({
+  label, color, onPress, disabled = false,
+  iconName, // Nombre del icono de Ionicons
+}: {
+  label: string; color: string; onPress: () => void;
+  disabled?: boolean; iconName: keyof typeof Ionicons.glyphMap;
+}) {
+  const pressAnim = useRef(new Animated.Value(1)).current;
+  const pressIn = () => Animated.spring(pressAnim, { toValue: 0.95, useNativeDriver: true, tension: 300 }).start();
+  const pressOut = () => Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true, tension: 300 }).start();
 
   return (
-    <View style={styles.container}>
-      {/* Cabecera con estado */}
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Panel de Cafetería</Text>
-        <View style={styles.statusControl}>
-          <Text style={[styles.statusLabel, { color: cafeteriaOpen ? '#2ecc71' : '#e74c3c' }]}>
-            {cafeteriaOpen ? 'ABIERTA' : 'CERRADA'}
-          </Text>
-          <Switch
-            value={cafeteriaOpen}
-            onValueChange={handleToggleCafeteria}
-            trackColor={{ false: '#e74c3c', true: '#2ecc71' }}
-            thumbColor="#fff"
-            disabled={togglingStatus}
-          />
-        </View>
-      </View>
+    <Animated.View style={{ flex: 1, transform: [{ scale: pressAnim }] }}>
+      <TouchableOpacity
+        style={[qa.btn, { backgroundColor: color, opacity: disabled ? 0.5 : 1 }]}
+        onPress={onPress}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        disabled={disabled}
+        activeOpacity={1}
+      >
+        <Ionicons name={iconName} size={22} color={C.white} />
+        <Text style={qa.label}>{label}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
-      {/* Accesos rápidos admin */}
-      <View style={styles.quickActions}>
-        <TouchableOpacity
-          style={[styles.quickBtn, styles.quickBtnSettings]}
-          onPress={() => router.push('/(admin)/settings')}
-        >
-          <Text style={styles.quickBtnEmoji}>🕐</Text>
-          <Text style={styles.quickBtnLabel}>Franjas Horarias</Text>
-        </TouchableOpacity>
+const qa = StyleSheet.create({
+  btn: { borderRadius: radius.md, paddingVertical: 14, paddingHorizontal: 4, alignItems: 'center', gap: 6, minHeight: 85, justifyContent: 'center' },
+  label: { color: C.white, fontSize: 10, fontWeight: '800', textAlign: 'center', letterSpacing: 0.3 },
+});
 
-        <TouchableOpacity
-          style={[styles.quickBtn, styles.quickBtnInventory]}
-          onPress={() => router.push('/(admin)/inventory')}
-        >
-          <Text style={styles.quickBtnEmoji}>📦</Text>
-          <Text style={styles.quickBtnLabel}>Inventario</Text>
-        </TouchableOpacity>
+// ── Tarjeta de pedido ────────────────────────────────────────────────
+function OrderRow({ item, onUpdate }: { item: Order; onUpdate: () => void }) {
+  const isPaid = item.status === 'paid';
+  const isPreparing = item.status === 'preparing';
 
-        <TouchableOpacity
-          style={[styles.quickBtn, styles.quickBtnBatch, confirmingBatch && { opacity: 0.5 }]}
-          onPress={handleConfirmBatch}
-          disabled={confirmingBatch}
-        >
-          <Text style={styles.quickBtnEmoji}>✅</Text>
-          <Text style={styles.quickBtnLabel}>
-            {confirmingBatch ? 'Procesando...' : 'Confirmar lote'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+  return (
+    <View style={or.card}>
+      <View style={[or.statusBar, { backgroundColor: isPaid ? C.accent : C.mid }]} />
 
-      {/* Verificador de código */}
-      <View style={styles.codeVerifier}>
-        <TextInput
-          style={styles.codeInput}
-          placeholder="Código de recogida"
-          value={codeInput}
-          onChangeText={setCodeInput}
-          keyboardType="numeric"
-          maxLength={4}
-          returnKeyType="done"
-          onSubmitEditing={handleVerifyCode}
-        />
-        <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyCode}>
-          <Text style={styles.verifyBtnText}>✓ Verificar</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Lista de pedidos */}
-      <Text style={styles.subtitle}>Pedidos Pendientes ({orders.length})</Text>
-      <FlatList
-        data={orders}
-        keyExtractor={o => o.id}
-        renderItem={({ item }) => (
-          <View style={styles.orderCard}>
-            <View style={styles.orderHeader}>
-              <Text style={styles.orderCode}>#{item.pickup_code}</Text>
-              <Text style={styles.orderSlot}>{item.pickup_timeslot}</Text>
-              <Text style={[styles.badge, item.status === 'paid' ? styles.badgePaid : styles.badgePreparing]}>
-                {item.status === 'paid' ? 'Pagado' : 'Preparando'}
+      <View style={or.body}>
+        <View style={or.row}>
+          <View style={or.codeWrap}>
+            <Text style={or.codeLabel}>CÓDIGO</Text>
+            <Text style={or.code}>{item.pickup_code}</Text>
+          </View>
+          <View style={or.metaRight}>
+            <View style={or.timeRow}>
+              <Ionicons name="time-outline" size={14} color={C.dark} />
+              <Text style={or.slot}>{item.pickup_timeslot}</Text>
+            </View>
+            <View style={[or.badge, isPaid ? or.badgePaid : or.badgePreparing]}>
+              <Text style={[or.badgeText, { color: isPaid ? C.warning : C.mid }]}>
+                {isPaid ? 'PAGADO' : 'PREPARANDO'}
               </Text>
             </View>
-
-            {item.items.map((i, idx) => (
-              <Text key={idx} style={styles.orderItem}>• {i.qty}x {i.name}</Text>
-            ))}
-
-            <View style={styles.orderActions}>
-              {item.status === 'paid' && (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.preparingBtn]}
-                  onPress={async () => { await updateOrderStatus(item.id, 'preparing'); loadOrders(); }}
-                >
-                  <Text style={styles.actionBtnText}>Iniciar preparación</Text>
-                </TouchableOpacity>
-              )}
-              {item.status === 'preparing' && (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.readyBtn]}
-                  onPress={async () => { await updateOrderStatus(item.id, 'ready'); loadOrders(); }}
-                >
-                  <Text style={styles.actionBtnText}>✅ Listo para recoger</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           </View>
+        </View>
+
+        <View style={or.items}>
+          {item.items.map((i, idx) => (
+            <Text key={idx} style={or.itemText}>
+              <Text style={or.itemQty}>{i.qty}  </Text>{i.name}
+            </Text>
+          ))}
+        </View>
+
+        {(isPaid || isPreparing) && (
+          <TouchableOpacity
+            style={[or.actionBtn, { backgroundColor: isPaid ? C.mid : C.accent }]}
+            onPress={async () => {
+              await updateOrderStatus(item.id, isPaid ? 'preparing' : 'ready');
+              onUpdate();
+            }}
+          >
+            <Ionicons 
+                name={isPaid ? "play-outline" : "checkmark-circle-outline"} 
+                size={16} 
+                color={isPaid ? C.white : C.dark} 
+                style={{ marginRight: 6 }}
+            />
+            <Text style={[or.actionText, { color: isPaid ? C.white : C.dark }]}>
+              {isPaid ? 'Iniciar preparación' : 'Marcar como listo'}
+            </Text>
+          </TouchableOpacity>
         )}
-        showsVerticalScrollIndicator={false}
-      />
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f4f8', padding: 16 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '800', color: '#1a1a2e' },
-  statusControl: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  quickActions: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  quickBtn: {
-    flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', gap: 4,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-  },
-  quickBtnSettings: { backgroundColor: '#1a1a2e' },
-  quickBtnInventory: { backgroundColor: '#3498db' },
-  quickBtnBatch: { backgroundColor: '#2ecc71' },
-  quickBtnEmoji: { fontSize: 20 },
-  quickBtnLabel: { color: '#fff', fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  subtitle: { fontSize: 16, fontWeight: '700', marginBottom: 10, color: '#555' },
-  codeVerifier: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  codeInput: {
-    flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 10,
-    fontSize: 18, letterSpacing: 4, textAlign: 'center', fontWeight: '700',
-  },
-  verifyBtn: { backgroundColor: '#2ecc71', padding: 14, borderRadius: 10, justifyContent: 'center' },
-  verifyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  orderCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
-  },
-  orderHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  orderCode: { fontSize: 22, fontWeight: '800', color: '#FF6B35' },
-  orderSlot: { fontSize: 14, color: '#666', flex: 1 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, fontSize: 12, fontWeight: '700' },
-  badgePaid: { backgroundColor: '#d4edda', color: '#155724' },
-  badgePreparing: { backgroundColor: '#fff3cd', color: '#856404' },
-  orderItem: { fontSize: 15, color: '#444', marginBottom: 2 },
-  orderActions: { marginTop: 12 },
-  actionBtn: { padding: 12, borderRadius: 8, alignItems: 'center' },
-  preparingBtn: { backgroundColor: '#3498db' },
-  readyBtn: { backgroundColor: '#2ecc71' },
-  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+const or = StyleSheet.create({
+  card: { flexDirection: 'row', backgroundColor: C.white, borderRadius: radius.md, marginBottom: 10, overflow: 'hidden', ...shadow.card },
+  statusBar: { width: 4 },
+  body: { flex: 1, padding: 14 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  codeWrap: {},
+  codeLabel: { fontSize: 9, fontWeight: '800', color: C.muted, letterSpacing: 1.5 },
+  code: { fontSize: 28, fontWeight: '900', color: C.dark, letterSpacing: -1 },
+  metaRight: { alignItems: 'flex-end', gap: 6 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  slot: { fontSize: 13, fontWeight: '700', color: C.dark },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  badgePaid: { backgroundColor: C.warningBg },
+  badgePreparing: { backgroundColor: C.successBg },
+  badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  items: { borderTopWidth: 1, borderTopColor: C.subtle, paddingTop: 8, marginBottom: 10, gap: 3 },
+  itemText: { fontSize: 13, color: '#444' },
+  itemQty: { fontWeight: '800', color: C.mid },
+  actionBtn: { padding: 11, borderRadius: radius.sm, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  actionText: { fontSize: 13, fontWeight: '800', letterSpacing: 0.2 },
+});
+
+// ── Pantalla principal ───────────────────────────────────────────────
+export default function AdminDashboard() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [codeInput, setCodeInput] = useState('');
+  const [cafeteriaOpen, setCafeteriaOpen] = useState<boolean | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+  const [confirmingBatch, setConfirmingBatch] = useState(false);
+
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const { token, isHydrated, user } = useAuthStore();
+  
+useEffect(() => {
+  const fetchStatus = async () => {
+    // Si no está hidratado o no hay token, no hacemos nada
+    try {
+      const status = await getCafeteriaStatus();
+      setCafeteriaOpen(status);
+    } catch (error: any) {
+      console.error("Error en fetchStatus:", error);
+    if (error.response?.status === 403) {
+        return;
+      }
+      setCafeteriaOpen(false);
+    }
+  };
+
+  fetchStatus();
+}, [isHydrated, token]); // El efecto se re-disparará cuando isHydrated pase a true
+
+const loadOrders = async () => {
+  if (!isHydrated || !token) return; 
+
+  try {
+    const data = await getPendingOrders();
+    setOrders(data);
+  } catch (error: any) {
+    console.error("Error cargando pedidos:", error);
+  }
+};
+useEffect(() => {
+  Animated.spring(headerAnim, { 
+    toValue: 1, 
+    useNativeDriver: true, 
+    tension: 50, 
+    friction: 12 
+  }).start();
+
+  // El intervalo funcionará cada 30 segundos
+  const interval = setInterval(() => {
+    loadOrders();
+  }, 30_000);
+
+  return () => clearInterval(interval);
+}, [isHydrated, token]); // Añadimos dependencias para que el intervalo use el token actual
+
+useEffect(() => {
+  loadOrders();
+}, [isHydrated, token]); 
+
+  const countPaid = orders.filter(o => o.status === 'paid').length;
+  const countPreparing = orders.filter(o => o.status === 'preparing').length;
+  const countReady = orders.filter(o => o.status === 'ready').length;
+
+  const handleVerifyCode = async () => {
+    if (!codeInput.trim()) return;
+      const result = await verifyPickupCode(codeInput.trim());
+      
+      if (result.valid) {
+        showActionModal({
+          title: 'Pedido Verificado',
+          confirmText: 'Entregar Pedido',
+          confirmColor: C.mid,
+          onConfirm: async () => {
+            await updateOrderStatus(result.order_id, 'delivered');
+            loadOrders();
+            closeActionModal();
+          },
+          visible: true,
+          content: (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontWeight: '800', color: C.dark }}>Artículos:</Text>
+              {result.items.map((i: any, idx: number) => (
+                <Text key={idx} style={{ color: '#444' }}>• {i.qty}x {i.name}</Text>
+              ))}
+              <View style={{ marginTop: 10, padding: 10, backgroundColor: C.subtle, borderRadius: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700' }}>TOTAL: {Number(result.total).toFixed(2)}€</Text>
+                <Text style={{ fontSize: 12, color: result.is_paid ? C.success : C.danger }}>
+                  {result.is_paid ? '✓ PAGADO' : '✗ PENDIENTE DE PAGO'}
+                </Text>
+              </View>
+            </View>
+          )
+        });
+      } else {
+        // Modal de Error simple
+        showActionModal({
+          title: 'Error de Código',
+          confirmText: 'Reintentar',
+          confirmColor: C.danger,
+          onConfirm: closeActionModal,
+          visible: true,
+          content: <Text>El código "{codeInput}" no es válido o ha expirado.</Text>
+        });
+      }
+    setCodeInput('');
+  };
+const [modalConfig, setModalConfig] = useState({
+  visible: false,
+  title: '',
+  confirmText: '',
+  confirmColor: C.mid,
+  onConfirm: () => {},
+  content: null as React.ReactNode,
+});
+
+// Función auxiliar para disparar el modal personalizado
+const showActionModal = (config: typeof modalConfig) => {
+  setModalConfig({ ...config, visible: true });
+};
+
+const closeActionModal = () => {
+  setModalConfig(prev => ({ ...prev, visible: false }));
+};
+const handleToggle = async (value: boolean) => {
+  showActionModal({
+      title: value ? '¿Abrir cafetería?' : '¿Cerrar pedidos?',
+      confirmText: value ? 'Abrir' : 'Cerrar',
+      confirmColor: value ? C.success : C.danger,
+      onConfirm: async () => {
+        setTogglingStatus(true);
+        closeActionModal();
+        try {
+          await toggleCafeteriaStatus(value);
+          setCafeteriaOpen(value);
+        } catch {
+          // Podrías mostrar otro modal de error aquí
+        } finally {
+          setTogglingStatus(false);
+        }
+      },
+      visible: true,
+      content: (
+        <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20 }}>
+          {value 
+            ? 'Los alumnos podrán volver a realizar pedidos normalmente.' 
+            : 'Se pausará la recepción de nuevos pedidos hasta que vuelvas a abrir.'}
+        </Text>
+      )
+    });
+  };
+
+  const handleBatch = async () => {
+// 1. Filtrar los pedidos que están en preparación
+  const ordersToReady = orders.filter(o => o.status === 'preparing');
+  const ids = ordersToReady.map(o => o.id);
+
+  // 2. Si no hay pedidos, mostrar modal de aviso (usando el mismo ActionModal)
+  if (!ids.length) {
+    showActionModal({
+      title: 'Sin pedidos',
+      confirmText: 'Entendido',
+      confirmColor: C.muted,
+      onConfirm: closeActionModal,
+      visible: true,
+      content: (
+        <Text style={{ color: C.muted }}>
+          No hay pedidos actualmente en estado "Preparando" para marcar como listos.
+        </Text>
+      )
+    });
+    return;
+  }
+
+  // 3. Mostrar modal de confirmación para el lote
+  showActionModal({
+    title: 'Confirmar entrega por lote',
+    confirmText: `Marcar ${ids.length} pedidos`,
+    confirmColor: C.success,
+    visible: true,
+    onConfirm: async () => {
+      setConfirmingBatch(true);
+      closeActionModal(); // Cerramos el modal inmediatamente para mostrar el feedback en la lista
+      try {
+        await confirmOrdersBatch(ids);
+        await loadOrders(); // Recargamos la lista para ver los cambios
+      } catch (error) {
+        // Opcional: Mostrar modal de error si falla la API
+        console.error("Error en batch:", error);
+      } finally {
+        setConfirmingBatch(false);
+      }
+    },
+    content: (
+      <View>
+        <Text style={{ marginBottom: 12, color: C.dark }}>
+          ¿Estás seguro de marcar estos <Text style={{ fontWeight: '900' }}>{ids.length}</Text> pedidos como listos para recoger?
+        </Text>
+        <View style={{ maxHeight: 120, backgroundColor: C.subtle, borderRadius: radius.sm, padding: 10 }}>
+           <ScrollView>
+             {ordersToReady.map((o, idx) => (
+               <Text key={o.id} style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
+                 #{o.pickup_code} — {o.items.length} productos
+               </Text>
+             ))}
+           </ScrollView>
+        </View>
+      </View>
+    )
+  });
+  };
+
+  return (
+    <View style={s.root}>
+      <Animated.View style={[s.header, {
+        opacity: headerAnim,
+        transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }],
+      }]}>
+        <View>
+          <View style={s.headerRowTitle}>
+             <Ionicons name="grid-outline" size={16} color={C.muted} style={{marginRight: 6}} />
+             <Text style={s.headerLabel}>PANEL DE CONTROL</Text>
+          </View>
+          <Text style={s.headerTitle}>Cafetería</Text>
+        </View>
+
+        <View style={s.headerRight}>
+          <View style={s.statusRow}>
+            <Ionicons name={cafeteriaOpen ? "lock-open-outline" : "lock-closed-outline"} size={14} color={cafeteriaOpen ? '#4ade80' : '#f87171'} />
+            <Text style={[s.statusText, { color: cafeteriaOpen ? '#4ade80' : '#f87171' }]}>
+              {cafeteriaOpen ? 'ABIERTA' : 'CERRADA'}
+            </Text>
+            {cafeteriaOpen === null ? (
+                <ActivityIndicator size="small" />
+              ) :(<Switch
+              value={!!cafeteriaOpen}
+              onValueChange={handleToggle}
+              trackColor={{ false: '#f87171', true: '#4ade80' }}
+              thumbColor={C.white}
+              disabled={togglingStatus}
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+            />)}
+          </View>
+
+          <TouchableOpacity
+            style={s.studentViewBtn}
+            onPress={() => router.push('/(student)/index')}
+          >
+            <Ionicons name="person-outline" size={14} color={C.accent} />
+            <Text style={s.studentViewText}>Vista alumno</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+        <View style={s.statsRow}>
+          <StatCard label="Pagados" value={countPaid} color={C.accent} index={0} />
+          <StatCard label="Preparando" value={countPreparing} color={C.mid} index={1} />
+          <StatCard label="Listos" value={countReady} color={C.success} index={2} />
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>ACCIONES</Text>
+          <View style={s.quickRow}>
+            <QuickAction
+              label="Franjas"
+              iconName="time-outline"
+              color={C.dark}
+              onPress={() => router.push('/(admin)/settings')}
+            />
+            <QuickAction
+              label="Inventario"
+              iconName="cube-outline"
+              color="#1D5F8A"
+              onPress={() => router.push('/(admin)/inventory')}
+            />
+            <QuickAction
+              label={confirmingBatch ? '...' : 'Lote listo'}
+              iconName="checkmark-done-outline"
+              color={C.mid}
+              onPress={handleBatch}
+              disabled={confirmingBatch}
+            />
+          </View>
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>VERIFICAR RECOGIDA</Text>
+          <View style={s.verifyRow}>
+            <View style={s.inputContainer}>
+                <Ionicons name="barcode-outline" size={20} color={C.muted} style={s.inputIcon} />
+                <TextInput
+                    style={s.codeInput}
+                    placeholder="0000"
+                    placeholderTextColor={C.muted}
+                    value={codeInput}
+                    onChangeText={setCodeInput}
+                    keyboardType="numeric"
+                    maxLength={4}
+                    returnKeyType="done"
+                    onSubmitEditing={handleVerifyCode}
+                />
+            </View>
+            <TouchableOpacity style={s.verifyBtn} onPress={handleVerifyCode}>
+              <Ionicons name="scan-outline" size={20} color={C.white} />
+              <Text style={s.verifyBtnText}>Verificar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={s.section}>
+          <View style={s.listHeader}>
+            <View style={s.headerRowTitle}>
+                <Ionicons name="list-outline" size={14} color={C.muted} style={{marginRight: 4}} />
+                <Text style={s.sectionLabel}>PEDIDOS ACTIVOS</Text>
+            </View>
+            <Text style={s.listCount}>{orders.length}</Text>
+          </View>
+          {orders.length === 0 ? (
+            <View style={s.emptyBox}>
+              <Ionicons name="cafe-outline" size={40} color={C.subtle} />
+              <Text style={s.emptyText}>Sin pedidos pendientes</Text>
+            </View>
+          ) : (
+            orders.map(order => (
+              <OrderRow key={order.id} item={order} onUpdate={loadOrders} />
+            ))
+          )}
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+      <ActionModal
+        visible={modalConfig.visible}
+        title={modalConfig.title}
+        confirmText={modalConfig.confirmText}
+        confirmColor={modalConfig.confirmColor}
+        onClose={closeActionModal}
+        onConfirm={modalConfig.onConfirm}
+      >
+        {modalConfig.content}
+      </ActionModal>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  header: { backgroundColor: C.dark, paddingTop: 26, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  headerRowTitle: { flexDirection: 'row', alignItems: 'center' },
+  headerLabel: { fontSize: 9, fontWeight: '800', color: C.muted, letterSpacing: 2 },
+  headerTitle: { fontSize: 24, fontWeight: '900', color: C.white, letterSpacing: -0.5, marginTop: 2 },
+  headerRight: { alignItems: 'flex-end', gap: 8 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  studentViewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(203,162,88,0.15)', borderWidth: 1, borderColor: 'rgba(203,162,88,0.3)', borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  studentViewText: { fontSize: 11, fontWeight: '700', color: C.accent },
+  scroll: { flex: 1 },
+  statsRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
+  section: { marginHorizontal: 16, marginTop: 20 },
+  sectionLabel: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2, marginBottom: 10 },
+  quickRow: { flexDirection: 'row', gap: 8 },
+  verifyRow: { flexDirection: 'row', gap: 10 },
+  inputContainer: { flex: 1, position: 'relative', justifyContent: 'center' },
+  inputIcon: { position: 'absolute', left: 12, zIndex: 1 },
+  codeInput: { backgroundColor: C.white, borderRadius: radius.md, paddingVertical: 14, paddingLeft: 40, paddingRight: 16, fontSize: 20, fontWeight: '900', color: C.dark, ...shadow.card },
+  verifyBtn: { backgroundColor: C.mid, borderRadius: radius.md, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, ...shadow.card },
+  verifyBtnText: { color: C.white, fontWeight: '800', fontSize: 14 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  listCount: { fontSize: 13, fontWeight: '900', color: C.dark, backgroundColor: C.subtle, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  emptyBox: { alignItems: 'center', padding: 40, gap: 12 },
+  emptyText: { fontSize: 14, color: C.muted, fontWeight: '500' },
 });

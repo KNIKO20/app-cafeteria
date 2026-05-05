@@ -1,4 +1,4 @@
-from mongoengine import Document, QuerySet, StringField, FloatField, BooleanField, IntField
+from mongoengine import Document, ListField, QuerySet, StringField, FloatField, BooleanField, IntField
 
 class ProductDocument(Document):
     meta = {
@@ -21,5 +21,6 @@ class ProductDocument(Document):
     stock = IntField(null=True)
     preparation_minutes = IntField()
     is_deleted = BooleanField(default=False)
+    allergens = ListField(StringField(), default=[])
 
     
