@@ -107,4 +107,4 @@ export const deleteProduct = (productId: string) =>
   api.delete(`/admin/products/${productId}/`).then(r => r.data);
 
 export const updateStockProduct = (productId: string, quantity: number) =>
-  api.patch(`/admin/products/${productId}/stock/`, { quantity }).then(r => r.data);
+  api.patch(`/admin/products/${productId}/inventory/`, { quantity }).then(r => r.data);

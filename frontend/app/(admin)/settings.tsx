@@ -161,8 +161,13 @@ const em = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(26,51,41,0.5)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: C.white,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: 40,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: 20,
+    paddingBottom: 40,
+    width: '100%', // Responsive
+    maxWidth: 500, // Estética en tablets/web
+    alignSelf: 'center',
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
@@ -172,15 +177,36 @@ const em = StyleSheet.create({
   label: { fontSize: 9, fontWeight: '900', color: C.muted, letterSpacing: 2 },
   timeDisplay: { fontSize: 34, fontWeight: '900', color: C.dark, letterSpacing: -1, marginBottom: 24 },
   fieldLabel: { fontSize: 11, fontWeight: '800', color: C.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  stepper: {
-    width: 44, height: 44, borderRadius: radius.sm,
-    backgroundColor: C.subtle, alignItems: 'center', justifyContent: 'center',
+  inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%', 
+      gap: 12,
+      marginVertical: 15,
+  },stepper: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: C.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Evita que los botones se encojan
+    flexShrink: 0, 
   },
   input: {
-    flex: 1, backgroundColor: C.bg, borderRadius: radius.md,
-    padding: 12, fontSize: 24, fontWeight: '900', color: C.dark,
-    borderWidth: 2, borderColor: C.light,
+    // CLAVE: flex 1 permite que el input tome el espacio restante
+    // sin empujar a los vecinos fuera de la pantalla
+    flex: 1, 
+    maxWidth: 120, // Opcional: para que no se vea gigante en tablets
+    height: 50,
+    backgroundColor: C.white,
+    borderWidth: 1,
+    borderColor: C.subtle,
+    borderRadius: radius.md,
+    fontSize: 22,
+    fontWeight: '900',
+    color: C.dark,
   },
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between',

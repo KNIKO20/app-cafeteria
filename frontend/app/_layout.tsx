@@ -6,6 +6,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Pressab
 import { useAuthStore } from '../stores/authStore';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useCartStore } from '../stores/cartStore';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { Ionicons } from '@expo/vector-icons'; 
 export const C = {
   dark:   '#1A3329',
@@ -402,15 +403,17 @@ export default function Layout() {
       </Drawer>
     );
   }
-
+  const PK_STRIPE = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const { Stack } = require('expo-router');
   return (
-    <Stack screenOptions={headerOpts}>
-      <Stack.Screen name="(auth)/login"      options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)/logout"     options={{ headerShown: false }} />
-      <Stack.Screen name="(admin)/dashboard" options={{ title: 'Panel Admin' }} />
-      <Stack.Screen name="(admin)/inventory" options={{ title: 'Inventario' }} />
-      <Stack.Screen name="(admin)/settings"  options={{ title: 'Franjas Horarias' }} />
-    </Stack>
+    <StripeProvider publishableKey={PK_STRIPE}>
+      <Stack screenOptions={headerOpts}>
+        <Stack.Screen name="(auth)/login"      options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/logout"     options={{ headerShown: false }} />
+        <Stack.Screen name="(admin)/dashboard" options={{ title: 'Panel Admin' }} />
+        <Stack.Screen name="(admin)/inventory" options={{ title: 'Inventario' }} />
+        <Stack.Screen name="(admin)/settings"  options={{ title: 'Franjas Horarias' }} />
+      </Stack>
+    </StripeProvider>
   );
 }
