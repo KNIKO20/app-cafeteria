@@ -18,7 +18,6 @@ from core.application.use_cases.update_slot import UpdateSlotUseCase
 from config.db import get_database
 from tests.fakes.fake_order_repository import FakeOrderRepository
 from tests.fakes.fake_product_repository import FakeProductRepository
-from adapters.payments.stripe_payment_gateway import StripePaymentGateway
 from adapters.payments.mock_payment_provider import MockPaymentProvider
 
 from core.application.use_cases.create_order import CreateOrderUseCase
@@ -99,11 +98,6 @@ _initialize_repositories()
 
 _mock_payment_gateway = MockPaymentProvider()
 
-def get_payment_provider():
-    global _payment_provider
-    if _payment_provider is None:
-        _payment_provider = StripePaymentGateway() 
-    return _payment_provider
 
 
 # Casos de uso (factories)
