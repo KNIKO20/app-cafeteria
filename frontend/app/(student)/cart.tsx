@@ -6,7 +6,6 @@ import { useCartStore } from '../../stores/cartStore';
 import { createOrder } from '../../services/api';
 import TimeslotPicker from '../../components/TimeslotPicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useStripe } from '@stripe/stripe-react-native';
 
 const C = {
   dark:   '#1A3329',
@@ -116,7 +115,7 @@ export default function CartScreen() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
   // Animaciones generales
   const headerAnim = useRef(new Animated.Value(0)).current;
   const footerAnim = useRef(new Animated.Value(0)).current;
@@ -127,48 +126,36 @@ export default function CartScreen() {
       Animated.timing(footerAnim, { toValue: 1, duration: 400, delay: 200, useNativeDriver: true }),
     ]).start();
   }, []);
+
   const handleOrder = async () => {
-    // 1. Validaciones previas
-    if (items.length === 0) return;
-    if (!selectedSlot || !selectedDate) {
-      Alert.alert('Faltan datos', 'Selecciona hora y fecha de recogida.');
+    if (items.length === 0) {
+      Alert.alert('Carrito vacío', 'Añade al menos un producto antes de continuar.');
+      return;
+    }
+    if (!selectedSlot) {
+      Alert.alert('Franja horaria requerida', 'Selecciona a qué hora quieres recoger tu pedido.');
+      return;
+    }
+    if (!selectedDate) {
+      Alert.alert('Fecha requerida', 'Selecciona la fecha de recogida.');
       return;
     }
 
     setLoading(true);
     try {
-      // 2. Crear pedido en el backend y obtener el Client Secret de Stripe
       const result = await createOrder({
         items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
         pickup_timeslot_id: selectedSlot,
         pickup_date: selectedDate,
       });
-
-      // 3. Inicializar la hoja de pago de Stripe con el secreto recibido
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: result.client_secret, 
-        merchantDisplayName: 'Cafetería DAW',
-        defaultBillingDetails: { name: 'Alumno' }
+      clearCart();
+      router.push({
+        pathname: '/(student)/payment',
+        params: { orderId: result.order_id, total: String(result.total) },
       });
-
-      if (initError) throw new Error(initError.message);
-
-      // 4. Mostrar la pasarela de Stripe
-      const { error: paymentError } = await presentPaymentSheet();
-
-      if (paymentError) {
-        // El usuario canceló o falló el pago, pero el pedido ya está creado como 'pending'
-        Alert.alert('Pago no completado', 'Puedes intentar pagar de nuevo desde "Mis Pedidos"');
-        router.push('/(student)/orders');
-      } else {
-        // 5. ¡Éxito!
-        clearCart();
-        Alert.alert('¡Éxito!', 'Pedido realizado y pagado correctamente.');
-        router.push('/(student)/orders');
-      }
     } catch (error: any) {
-      const msg = error.response?.data?.error || error.message || 'Error al procesar el pedido';
-      Alert.alert('Error', msg);
+      const msg = error.response?.data?.error || 'No se pudo crear el pedido. Inténtalo de nuevo.';
+      Alert.alert('Error al crear pedido', msg);
     } finally {
       setLoading(false);
     }

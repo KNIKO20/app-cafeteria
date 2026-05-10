@@ -19,7 +19,7 @@ class TestProduct(unittest.TestCase):
             "id": "prod-1",
             "name": "Bocadillo de Jamón",
             "price": 3.50,
-            "category": ProductCategory.BOCADILLO,
+            "category": ProductCategory.BOCADILLO_FRIO,
         }
         defaults.update(overrides)
         return Product(**defaults)

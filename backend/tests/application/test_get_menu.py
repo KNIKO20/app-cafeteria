@@ -21,7 +21,7 @@ class TestGetMenuUseCase(unittest.TestCase):
         # Productos de ejemplo
         self.repo.add(Product(
             id="p1", name="Bocadillo de Jamón", price=3.50,
-            category=ProductCategory.BOCADILLO, is_available=True, stock=10,
+            category=ProductCategory.BOCADILLO_FRIO, is_available=True, stock=10,
         ))
         self.repo.add(Product(
             id="p2", name="Café con Leche", price=1.20,
@@ -61,7 +61,7 @@ class TestGetMenuUseCase(unittest.TestCase):
 
     def test_filter_by_category_bocadillo(self):
         """Filtrar por categoría 'bocadillo'."""
-        products = self.use_case.execute(category="bocadillo")
+        products = self.use_case.execute(category="bocadillo_frio")
         self.assertEqual(len(products), 1)
         self.assertEqual(products[0].name, "Bocadillo de Jamón")
 

@@ -5,7 +5,6 @@ import os
 from decouple import config
 from pathlib import Path
 
-from adapters.persistence.repositories.mongo_timeslot_repository import seed_default_slots
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -13,7 +12,8 @@ ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = 'config.urls'
 STATIC_URL = 'static/'
 ADMIN_EMAILS = config('ADMIN_EMAILS', default='').split(',')
-
+#STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+#STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
 
 INSTALLED_APPS = [
     'django.contrib.admin',         
@@ -71,6 +71,9 @@ try:
         serverSelectionTimeoutMS=5000 
     )
     print("MongoDB conectado exitosamente")
+    from adapters.persistence.repositories.mongo_timeslot_repository import seed_default_slots
+    seed_default_slots()
+
 except Exception as e:
     print(f"Error conectando a MongoDB: {e}")
 
@@ -112,9 +115,8 @@ CORS_ALLOW_HEADERS = [
 
 # ── Variables de entorno ───────────────────────────────
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
-STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+#STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
-seed_default_slots()

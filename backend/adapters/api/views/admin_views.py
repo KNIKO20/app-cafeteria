@@ -102,6 +102,44 @@ class ProductDetailAdminView(APIView):
 class UpdateInventoryView(APIView):
     permission_classes = [IsAdminRole]
  
+    def patch(self, request, product_id):
+        use_case = get_update_inventory_use_case()
+        
+        quantity = request.data.get("quantity")
+
+        success = use_case.execute(product_id, quantity)
+        if not success:
+            return Response({"error":"Producto no encontrado"},status=404)
+        return Response({
+            "message":"Stock actualizado correctamente",
+            "product_id":product_id,
+            "new_stock":quantity
+
+        },status=200)
+ 
+
+
+class PendingOrdersView(APIView):
+    """Panel del administrador: ver pedidos pendientes"""
+    Permission_classes = [IsAdminRole]
+    
+    def get(self, request):
+        use_case = get_pending_orders_use_case()
+        orders = use_case.execute()
+        
+        return Response([{
+            "id": o.id,
+            "pickup_code": o.pickup_code,
+            "pickup_timeslot": o.pickup_timeslot,
+            "status": o.status.value,
+            "total": o.total,
+            "items": [{"name": i.product_name, "qty": i.quantity} for i in o.items]
+        } for o in orders])
+
+class UpdateOrderStatusView(APIView):
+    """El admin cambia el estado del pedido"""
+    Permission_classes = [IsAdminRole]
+    
     def patch(self, request, order_id):
         new_status = request.data.get("status", "").strip()
         if not new_status:
@@ -134,53 +172,7 @@ class UpdateInventoryView(APIView):
                 {"error": f"Error interno: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
- 
 
-
-class PendingOrdersView(APIView):
-    """Panel del administrador: ver pedidos pendientes"""
-    Permission_classes = [IsAdminRole]
-    
-    def get(self, request):
-        use_case = get_pending_orders_use_case()
-        orders = use_case.execute()
-        
-        return Response([{
-            "id": o.id,
-            "pickup_code": o.pickup_code,
-            "pickup_timeslot": o.pickup_timeslot,
-            "status": o.status.value,
-            "total": o.total,
-            "items": [{"name": i.product_name, "qty": i.quantity} for i in o.items]
-        } for o in orders])
-
-class UpdateOrderStatusView(APIView):
-    """El admin cambia el estado del pedido"""
-    Permission_classes = [IsAdminRole]
-    
-    def patch(self, request, order_id):
-        """
-            TODO falta crear su caso de uso y implementar las notificacion allí
-        """
-        from config.di_container import get_order_repo
-        repo = get_order_repo()
-        order = repo.find_by_id(order_id)
-        
-        if not order:
-            return Response({"error": "Pedido no encontrado"}, status=404)
-        
-        new_status = request.data.get("status")
-        if new_status == "preparing":
-            order.mark_as_preparing()
-        elif new_status == "ready":
-            order.mark_as_ready()
-        elif new_status == "collected":
-            order.mark_as_collected()
-        else:
-            return Response({"error": "Estado no válido"}, status=400)
-        
-        repo.save(order)
-        return Response({"status": order.status.value})
 
 class VerifyPickupCodeView(APIView):
     """Verifica el código QR/numérico al entregar el pedido"""

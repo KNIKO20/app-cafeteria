@@ -93,16 +93,18 @@ def _initialize_repositories():
         _user_repo = FakeUserRepository()
         _is_demo_mode = True
         
-        # Semilla de datos para el modo Fake (así la app no está vacía)
-        from core.domain.entities.product import Product, ProductCategory
-        _product_repo.save(Product(id="p1", name="Bocadillo Jamón", price=3.50, description="Clásico con pan crujiente y aceite.", category=ProductCategory.BOCADILLO, preparation_minutes=5, is_available=True, image_url="", stock=50))
-        _product_repo.save(Product(id="p2", name="Café con Leche", price=1.20, description="Café arábica con leche cremosa.", category=ProductCategory.BEBIDA, preparation_minutes=2, is_available=True, image_url="", stock=100))
-        _product_repo.save(Product(id="p3", name="Tarta de Queso", price=3.80, description="Casera con base de galleta.", category=ProductCategory.POSTRE, preparation_minutes=1, is_available=True, image_url="", stock=20))
 
 _initialize_repositories()
 
-_payment_gateway = StripePaymentGateway()
+
 _mock_payment_gateway = MockPaymentProvider()
+
+def get_payment_provider():
+    global _payment_provider
+    if _payment_provider is None:
+        _payment_provider = StripePaymentGateway() 
+    return _payment_provider
+
 
 # Casos de uso (factories)
 def get_update_order_status_use_case() -> UpdateOrderStatusUseCase:
